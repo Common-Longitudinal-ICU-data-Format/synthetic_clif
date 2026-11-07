@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This repository generates synthetic CLIF (Common Longitudinal ICU data Format) datasets for testing code without using protected health information (PHI). The synthetic data follows the CLIF 2.1.0 specification with realistic properties including missingness, outliers, and irregular measurement frequencies.
+This repository generates synthetic CLIF (Common Longitudinal ICU data Format) datasets for testing code without using protected health information (PHI). The synthetic data follows the CLIF 3.0.0 specification by default, and CLIF 2.1.0 with `--clif-version 2.1`, with realistic properties including missingness, outliers, and irregular measurement frequencies.
 
 ## Build and Run Commands
 
@@ -16,16 +16,19 @@ pip install -e .
 pytest
 
 # Run specific test file
-pytest tests/test_generators.py
+pytest tests/test_vitals.py
 
 # Run single test
-pytest tests/test_generators.py::test_vitals_generation -v
+pytest tests/test_clif3.py -v
 
 # Generate synthetic dataset (small test set: 10 patients, 12 hospitalizations)
-python -m synthetic_clif.generate --patients 10 --hospitalizations 12 --output data/test/
+python -m synthetic_clif --patients 10 --hospitalizations 12 --output data/test/
 
 # Generate full dataset (10,000 hospitalizations)
-python -m synthetic_clif.generate --hospitalizations 10000 --output data/full/
+python -m synthetic_clif --hospitalizations 10000 --output data/full/ -w 4
+
+# Generate CLIF 2.1.0 tables (3.0.0 is the default)
+python -m synthetic_clif --hospitalizations 100 --output data/v21/ --clif-version 2.1
 ```
 
 ## Architecture
@@ -42,6 +45,11 @@ python -m synthetic_clif.generate --hospitalizations 10000 --output data/full/
   - `medications.py`: Continuous and intermittent medication administration
   - `respiratory.py`: Respiratory support and ventilator settings
   - Additional generators for each CLIF table
+- **`synthetic_clif/clif3/`**: CLIF 3.0.0 support. `schema.py` loads the vendored
+  `clif3_schema.json` (rebuild with `tools/build_clif3_schema.py`), `vocab.py`
+  maps 2.1 values to 3.0, `convert.py` turns the generated 2.1 tables into 3.0
+  tables (and derives airway, line, misc_icu_orders, ed_encounter), and
+  `validate.py` checks any table against the 3.0 schema
 - **`synthetic_clif/models/`**: Dataclasses representing CLIF entities and patient state
 - **`synthetic_clif/simulation/`**: Patient trajectory simulation engine
   - Maintains physiologically coherent state across time
@@ -63,7 +71,7 @@ python -m synthetic_clif.generate --hospitalizations 10000 --output data/full/
 - Hospital length of stay follows log-normal distribution fitted to real ICU data
 - Patient IDs use UUID format; hospitalization IDs include patient prefix for traceability
 
-## CLIF 2.1.0 Schema Reference
+## CLIF 2.1.0 Schema Reference (internal simulation; 3.0.0 output comes from `synthetic_clif/clif3/`)
 
 The CLIF format includes 16 beta tables (production-ready) and 12 concept tables (draft):
 

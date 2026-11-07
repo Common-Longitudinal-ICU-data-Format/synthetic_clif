@@ -77,6 +77,8 @@ def clifpy_results():
             n_hospitalizations=120,
             seed=42,
             include_concept_tables=True,
+            clif_version="2.1",  # validated against clifpy's 2.1 schema;
+            # 3.0 output is checked in test_clif3.py
         )
         dataset.generate()
         dataset.to_parquet(output_dir)

@@ -47,6 +47,21 @@ from synthetic_clif.generators.concept import (
 )
 
 
+SUPPORTED_CLIF_VERSIONS = ("2.1", "3.0")
+
+
+def normalize_clif_version(version) -> str:
+    """Accept "2.1", "2.1.0", "3", "3.0", "3.0.0" and return "2.1" or "3.0"."""
+    v = str(version).strip().lower().lstrip("v")
+    parts = v.split(".")
+    short = ".".join((parts + ["0"])[:2])
+    if short not in SUPPORTED_CLIF_VERSIONS:
+        raise ValueError(
+            f"Unsupported CLIF version {version!r}; choose one of {SUPPORTED_CLIF_VERSIONS}"
+        )
+    return short
+
+
 class SyntheticCLIFDataset:
     """Orchestrates generation of complete synthetic CLIF datasets.
 
@@ -67,6 +82,7 @@ class SyntheticCLIFDataset:
         mcide_dir: Optional[Path] = None,
         include_concept_tables: bool = True,
         workers: int = 1,
+        clif_version: str = "3.0",
     ):
         """Initialize the synthetic dataset generator.
 
@@ -77,6 +93,9 @@ class SyntheticCLIFDataset:
             mcide_dir: Optional path to mCIDE CSV directory
             include_concept_tables: Whether to generate concept tables (draft status)
             workers: Number of parallel workers (1 = sequential, >1 = parallel big-3)
+            clif_version: CLIF version of the output tables, "3.0" (default) or
+                "2.1". 3.0 output is produced by converting the 2.1 simulation
+                (see ``synthetic_clif.clif3``).
         """
         self.n_patients = n_patients
         self.n_hospitalizations = n_hospitalizations
@@ -84,6 +103,7 @@ class SyntheticCLIFDataset:
         self.mcide_dir = mcide_dir
         self.include_concept_tables = include_concept_tables
         self.workers = max(1, workers)
+        self.clif_version = normalize_clif_version(clif_version)
 
         # Initialize shared mCIDE loader
         self.mcide = MCIDELoader(mcide_dir)
@@ -341,6 +361,15 @@ class SyntheticCLIFDataset:
             t = time.time()
             self._tables["transfusion"] = self.transfusion_gen.generate(hospitalizations)
             _log("transfusion", t, len(self._tables["transfusion"]))
+
+        if self.clif_version == "3.0":
+            t = time.time()
+            from synthetic_clif.clif3 import convert_to_clif3
+
+            self._tables_v21 = self._tables
+            self._tables = convert_to_clif3(self._tables, seed=self.seed)
+            _log("")
+            _log("converted to CLIF 3.0", t, sum(len(df) for df in self._tables.values()))
 
         total_elapsed = time.time() - total_start
         total_rows = sum(len(df) for df in self._tables.values())

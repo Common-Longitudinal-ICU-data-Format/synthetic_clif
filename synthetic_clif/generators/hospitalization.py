@@ -186,7 +186,8 @@ class HospitalizationGenerator(BaseGenerator):
         # Probability of readmission decreases geometrically
         while remaining > 0:
             # 30% of patients have readmissions
-            n_readmit = min(remaining, int(n_patients * 0.3))
+            # max(1, ...) so fewer than 4 patients cannot loop forever
+            n_readmit = min(remaining, max(1, int(n_patients * 0.3)))
             readmit_indices = self.rng.choice(n_patients, size=n_readmit, replace=True)
             for idx in readmit_indices:
                 counts[idx] += 1

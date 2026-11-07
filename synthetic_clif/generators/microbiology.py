@@ -311,6 +311,10 @@ class MicrobiologySusceptibilityGenerator(BaseGenerator):
         """
         records = []
 
+        # No cultures (tiny datasets): the culture frame has no columns
+        if "organism_id" not in cultures_df.columns:
+            return pd.DataFrame(records)
+
         # Filter to positive cultures with organism_id
         positive_cultures = cultures_df[cultures_df["organism_id"].notna()]
 
