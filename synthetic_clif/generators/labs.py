@@ -9,6 +9,7 @@ import pandas as pd
 from synthetic_clif.generators.base import BaseGenerator
 from synthetic_clif.config.mcide import MCIDELoader
 from synthetic_clif.utils.timestamps import generate_ordered_timestamps
+from synthetic_clif.physiology.course import HospitalCourse, course_for_row
 
 
 class LabsGenerator(BaseGenerator):
@@ -24,7 +25,11 @@ class LabsGenerator(BaseGenerator):
     - lab_order_name, lab_name, lab_specimen_name, lab_specimen_category, lab_loinc_code
 
     Features:
-    - Daily routine labs, PRN based on clinical status
+    - Values observed from the shared course (synthetic_clif.physiology):
+      each patient has their own baseline, values persist day to day, and
+      linked labs move together (creatinine/BUN, lactate/bicarbonate/pH,
+      Na - Cl - HCO3 anion gap, Henderson-Hasselbalch pH)
+    - Daily routine labs, serial lactates on vasopressors, blood gases on IMV
     - Proper timestamp ordering: order < collect < result
     - ~10% missingness for less common labs
     """
@@ -111,7 +116,7 @@ class LabsGenerator(BaseGenerator):
         "sodium": (140, 3, 120, 160),
         "potassium": (4.0, 0.5, 2.5, 7.0),
         "chloride": (102, 3, 90, 115),
-        "bicarbonate": (24, 3, 10, 40),
+        "bicarbonate": (24, 3, 5, 45),
         "bun": (15, 8, 5, 100),
         "creatinine": (1.0, 0.5, 0.3, 10.0),
         "glucose_serum": (110, 40, 40, 500),
@@ -125,7 +130,7 @@ class LabsGenerator(BaseGenerator):
         "alkaline_phosphatase": (80, 30, 30, 500),
         "bilirubin_total": (0.8, 0.5, 0.1, 20.0),
         "bilirubin_conjugated": (0.2, 0.2, 0, 10.0),
-        "lactate": (1.5, 1.0, 0.5, 15.0),
+        "lactate": (1.5, 1.0, 0.3, 20.0),
         "hemoglobin": (12, 2, 5, 18),
         "wbc": (8, 4, 0.5, 50),
         "platelet_count": (220, 80, 10, 800),
@@ -138,12 +143,12 @@ class LabsGenerator(BaseGenerator):
         "crp": (5, 10, 0, 300),
         "procalcitonin": (0.3, 0.5, 0, 50),
         # Arterial blood gas values
-        "ph_arterial": (7.40, 0.05, 7.0, 7.6),
-        "pco2_arterial": (40, 5, 20, 80),
+        "ph_arterial": (7.40, 0.05, 6.8, 7.7),
+        "pco2_arterial": (40, 5, 15, 120),
         "po2_arterial": (85, 15, 40, 500),
         # Venous blood gas values (slightly different physiology)
-        "ph_venous": (7.36, 0.05, 7.0, 7.6),
-        "pco2_venous": (46, 5, 25, 85),
+        "ph_venous": (7.36, 0.05, 6.8, 7.7),
+        "pco2_venous": (46, 5, 20, 130),
         "so2_central_venous": (70, 8, 40, 90),
     }
 
@@ -176,7 +181,7 @@ class LabsGenerator(BaseGenerator):
                 discharge_time = admit_time + timedelta(days=5)
 
             hosp_labs = self._generate_hospitalization_labs(
-                hosp_id, admit_time, discharge_time, reference_units
+                hosp_id, admit_time, discharge_time, reference_units, course_for_row(hosp)
             )
             records.extend(hosp_labs)
 
@@ -199,9 +204,11 @@ class LabsGenerator(BaseGenerator):
         admit_time: datetime,
         discharge_time: datetime,
         reference_units: dict[str, str],
+        course: Optional[HospitalCourse] = None,
     ) -> list[dict]:
         """Generate all labs for one hospitalization."""
         records = []
+        self._course = course
         los_hours = (discharge_time - admit_time).total_seconds() / 3600
         los_days = los_hours / 24
 
@@ -260,6 +267,23 @@ class LabsGenerator(BaseGenerator):
                 )
             )
 
+        # Course-driven draws: serial lactates on vasopressors, blood gases on IMV
+        if course is not None:
+            for start, end in _runs(course.ne_eq > 0):
+                h = start + self.rng.uniform(0.5, 2)
+                while h < min(end, course.n_hours - 2) and h < los_hours:
+                    records.extend(self._generate_panel(
+                        hospitalization_id, admit_time + timedelta(hours=float(h)),
+                        "lactate", "STAT", reference_units))
+                    h += self.rng.uniform(4, 8)
+            for start, end in course.imv_episodes:
+                h = start + self.rng.uniform(0.5, 1.5)   # post-intubation gas
+                while h < min(end, course.n_hours - 2) and h < los_hours:
+                    records.extend(self._generate_panel(
+                        hospitalization_id, admit_time + timedelta(hours=float(h)),
+                        "abg_arterial", "STAT", reference_units))
+                    h += self.rng.uniform(8, 16)
+        self._course = None
         return records
 
     def _generate_admission_labs(
@@ -366,13 +390,18 @@ class LabsGenerator(BaseGenerator):
         collect_time = order_time + timedelta(minutes=collect_delay)
         result_time = collect_time + timedelta(minutes=result_delay)
 
+        course = getattr(self, "_course", None)
+        observed = course.labs_at(collect_time, labs, self.rng) if course is not None else {}
+
         for lab_cat in labs:
             if lab_cat not in self.LAB_PARAMS:
                 continue
 
             mean, std, lower, upper = self.LAB_PARAMS[lab_cat]
-            value = self.rng.normal(mean, std)
-            value = np.clip(value, lower, upper)
+            value = observed.get(lab_cat)
+            if value is None:
+                value = self.rng.normal(mean, std)
+            value = float(np.clip(value, lower, upper))
 
             # Format value string
             if lab_cat in ["ph", "ph_arterial", "ph_venous"]:
@@ -457,3 +486,17 @@ class LabsGenerator(BaseGenerator):
             return "lft"
         else:
             return "misc"
+
+
+def _runs(mask) -> list[tuple[int, int]]:
+    """Contiguous True runs as (start, end_exclusive) indices."""
+    runs, start = [], None
+    for i, v in enumerate(mask):
+        if v and start is None:
+            start = i
+        elif not v and start is not None:
+            runs.append((start, i))
+            start = None
+    if start is not None:
+        runs.append((start, len(mask)))
+    return runs

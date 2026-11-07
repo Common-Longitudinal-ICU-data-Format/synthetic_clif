@@ -177,8 +177,13 @@ errors = validate_tables(dataset.generate())  # {table: []} when valid
 
 The synthetic data includes realistic artifacts found in real EHR data:
 
-- **Temporal autocorrelation** - Sequential vital signs follow physiologically plausible patterns
-- **Inter-variable correlation** - Low SpO2 triggers respiratory support escalation; low MAP triggers vasopressors
+- **One shared course per stay** - Vitals, respiratory support, continuous medications and labs all observe the same hidden hourly course (`synthetic_clif/physiology/`), so they agree with each other:
+  - MAP comes from the same SBP/DBP reading (about DBP + pulse pressure / 3)
+  - Vasopressors start after MAP falls and are titrated to a MAP goal; lactate is higher on pressors
+  - Devices escalate and wean with respiratory failure; FiO2 is titrated to oxygenation, so SpO2 falls as FiO2 rises
+  - Ventilator settings persist through an IMV episode (tidal volume 6-8 mL/kg predicted body weight, ARDSNet PEEP); plateau, peak pressure and minute ventilation follow from the settings
+  - Sedation and analgesia run during IMV episodes
+  - Labs keep each patient's baseline from day to day; BUN tracks creatinine, chloride follows the anion gap, and blood-gas pH follows Henderson-Hasselbalch
 - **Irregular measurement frequency** - ICU vitals ~hourly, ward vitals ~q4h
 - **Missingness patterns** - MCAR, MAR, and MNAR based on clinical documentation practices
 - **Outliers** - Physiologically plausible extremes (fever spikes, hypotensive episodes)

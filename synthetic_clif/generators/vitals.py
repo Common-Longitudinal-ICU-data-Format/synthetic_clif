@@ -8,7 +8,7 @@ import pandas as pd
 
 from synthetic_clif.generators.base import BaseGenerator
 from synthetic_clif.config.mcide import MCIDELoader
-from synthetic_clif.models.patient_state import PatientState
+from synthetic_clif.physiology.course import HospitalCourse, course_for_row
 from synthetic_clif.utils.timestamps import generate_irregular_timestamps
 
 
@@ -23,9 +23,12 @@ class VitalsGenerator(BaseGenerator):
     - meas_site_name (measurement site)
 
     Features:
-    - Temporal autocorrelation (values don't jump unrealistically)
-    - Measurement frequency varies by location (ICU vs ward)
-    - ~5% random missingness, ~1% outliers
+    - Values observed from the hospitalization's shared course
+      (synthetic_clif.physiology), so vitals agree with vasopressors,
+      FiO2 and ventilator settings
+    - MAP derived from the same SBP/DBP reading (DBP + pulse pressure / 3)
+    - Measurement frequency varies by location and instability
+    - ~5% missingness, ~1% artefacts (BP triplets dropped or distorted together)
     """
 
     # Vital sign parameters: (mean, std, lower_bound, upper_bound)
@@ -84,9 +87,10 @@ class VitalsGenerator(BaseGenerator):
             if pd.isna(discharge_time):
                 discharge_time = admit_time + timedelta(days=5)
 
-            # Generate vitals for this hospitalization
+            # Generate vitals for this hospitalization from its shared course
+            course = course_for_row(hosp)
             hosp_vitals = self._generate_hospitalization_vitals(
-                hosp_id, admit_time, discharge_time, location_lookup.get(hosp_id)
+                hosp_id, admit_time, discharge_time, location_lookup.get(hosp_id), course
             )
             records.extend(hosp_vitals)
 
@@ -97,28 +101,32 @@ class VitalsGenerator(BaseGenerator):
             df["vital_name"] = df["vital_category"].str.lower()
             df["recorded_dttm"] = pd.to_datetime(df["recorded_dttm"], utc=True)
 
-            # Add missingness and outliers (per-category with physiological bounds)
-            df = self.add_missingness(df, "vital_value", missingness_rate)
+            # Missingness and outliers. The SBP/DBP/MAP triplet from one cuff or
+            # arterial-line reading is treated as a unit, so a dropped or
+            # artefactual reading stays internally consistent.
+            is_bp = df["_bp"] >= 0
+            other = df.loc[~is_bp].copy()
+            other = self.add_missingness(other, "vital_value", missingness_rate)
             outlier_bounds = {
                 "temp_c": (32.0, 44.0),
                 "heart_rate": (0.0, 300.0),
-                "sbp": (0.0, 300.0),
-                "dbp": (0.0, 200.0),
                 "spo2": (50.0, 100.0),
                 "respiratory_rate": (0.0, 60.0),
-                "map": (0.0, 250.0),
                 "height_cm": (76.0, 255.0),
                 "weight_kg": (30.0, 1100.0),
             }
             for cat, (lb, ub) in outlier_bounds.items():
-                mask = df["vital_category"] == cat
+                mask = other["vital_category"] == cat
                 if mask.any():
-                    subset = df.loc[mask].copy()
+                    subset = other.loc[mask].copy()
                     subset = self.add_outliers(
                         subset, "vital_value", outlier_rate,
                         lower_bound=lb, upper_bound=ub,
                     )
-                    df.loc[mask, "vital_value"] = subset["vital_value"]
+                    other.loc[mask, "vital_value"] = subset["vital_value"]
+            df.loc[~is_bp, "vital_value"] = other["vital_value"]
+            df = self._bp_missingness_and_artefacts(df, missingness_rate, outlier_rate)
+            df = df.drop(columns="_bp")
 
         return df
 
@@ -154,186 +162,146 @@ class VitalsGenerator(BaseGenerator):
 
         return "icu"
 
+    def _bp_missingness_and_artefacts(
+        self, df: pd.DataFrame, missingness_rate: float, outlier_rate: float
+    ) -> pd.DataFrame:
+        """Drop or distort whole SBP/DBP/MAP triplets."""
+        groups = df.loc[df["_bp"] >= 0, "_bp"].unique()
+        if len(groups) == 0:
+            return df
+        u = self.rng.random(len(groups))
+        missing = set(groups[u < missingness_rate])
+        artefact = groups[(u >= missingness_rate) & (u < missingness_rate + outlier_rate)]
+        if missing:
+            df.loc[df["_bp"].isin(missing), "vital_value"] = np.nan
+        for g in artefact:
+            rows = df.index[df["_bp"] == g]
+            vals = dict(zip(df.loc[rows, "vital_category"], df.loc[rows, "vital_value"]))
+            if "sbp" not in vals or "dbp" not in vals:
+                continue
+            if self.rng.random() < 0.5:   # line flush / transducer artefact: very high
+                sbp = self.rng.uniform(220, 300)
+                dbp = vals["dbp"] * self.rng.uniform(1.3, 2.0)
+            else:                         # damped trace or cuff error: very low
+                sbp = vals["sbp"] * self.rng.uniform(0.35, 0.6)
+                dbp = vals["dbp"] * self.rng.uniform(0.5, 0.8)
+            dbp = min(dbp, sbp - 5)
+            new = {"sbp": round(sbp), "dbp": round(max(dbp, 5)),
+                   "map": round(max(dbp, 5) + (sbp - max(dbp, 5)) / 3)}
+            for r, cat in zip(rows, df.loc[rows, "vital_category"]):
+                df.at[r, "vital_value"] = new[cat]
+        return df
+
     def _generate_hospitalization_vitals(
         self,
         hospitalization_id: str,
         admit_time: datetime,
         discharge_time: datetime,
         locations: Optional[list[tuple]],
+        course: Optional[HospitalCourse] = None,
     ) -> list[dict]:
-        """Generate all vital signs for one hospitalization."""
+        """Generate all vital signs for one hospitalization by observing its course."""
         records = []
+        if course is None:
+            course = course_for_row({
+                "hospitalization_id": hospitalization_id,
+                "admission_dttm": admit_time,
+                "discharge_dttm": discharge_time,
+            })
 
-        # Initialize patient state
-        acuity = self.rng.choice([1, 2, 3, 4], p=[0.2, 0.3, 0.35, 0.15])
-        state = PatientState.from_acuity(acuity, self.rng)
+        # Arterial line placed when the patient first needs pressors or IMV
+        unstable = (course.ne_eq > 0) | (course.level == 4)
+        art_from = None
+        if unstable.any() and self.rng.random() < 0.85:
+            art_from = int(np.argmax(unstable))
 
-        # Get mean measurement interval based on acuity
-        mean_interval = 1.0 if acuity <= 2 else 2.0
-
-        # Generate measurement timestamps
         timestamps = generate_irregular_timestamps(
             admit_time,
             discharge_time,
-            mean_interval_hours=mean_interval,
+            mean_interval_hours=1.0,
             cv=0.3,
             rng=self.rng,
         )
-
-        # Track last measurement time for state evolution
-        last_time = admit_time
-
+        first = True
         for ts in timestamps:
-            # Evolve patient state
-            dt_hours = (ts - last_time).total_seconds() / 3600
-            if dt_hours > 0:
-                state = state.step(dt_hours, self.rng)
-            last_time = ts
-
-            # Adjust measurement frequency based on current location
+            h = course.hour_index(ts)
             location = self._get_location_at_time(ts, locations)
             freq = self.FREQUENCY_BY_LOCATION.get(location, 4.0)
+            # Sicker patients are watched more closely wherever they are
+            if not (unstable[h] or course.level[h] >= 3 or first):
+                if self.rng.random() > 1.0 / freq:
+                    continue
 
-            # Not all vitals measured at every time point
-            # Core vitals (HR, BP, SpO2, RR) measured frequently
-            # Others less frequently
-
-            # Core vitals
-            if self.rng.random() < 0.95:  # 95% of time points
+            if self.rng.random() < 0.95:
+                arterial = art_from is not None and h >= art_from
                 records.extend(
-                    self._generate_core_vitals(hospitalization_id, ts, state)
+                    self._generate_core_vitals(hospitalization_id, ts, course, arterial)
                 )
 
-            # Temperature less frequently
-            if self.rng.random() < 0.3:  # 30% of time points
+            if self.rng.random() < 0.3 or first:
                 records.append(
-                    {
-                        "hospitalization_id": hospitalization_id,
-                        "recorded_dttm": ts,
-                        "vital_category": "temp_c",
-                        "vital_value": state.temperature,
-                        "meas_site_name": self.rng.choice(
-                            ["Oral", "Tympanic", "Temporal", "Axillary"]
-                        ),
-                    }
+                    self._row(hospitalization_id, ts, "temp_c",
+                              round(course.at("temp", ts) + self.rng.normal(0, 0.1), 1),
+                              self.rng.choice(["Oral", "Tympanic", "Temporal", "Axillary"]))
                 )
 
-            # Height/weight only on admission or infrequently
-            if (ts - admit_time).total_seconds() < 3600:  # First hour
-                records.extend(
-                    self._generate_height_weight(hospitalization_id, ts)
-                )
+            if first:
+                records.extend(self._generate_height_weight(hospitalization_id, ts, course))
+            first = False
 
         return records
+
+    @staticmethod
+    def _row(hosp_id, ts, cat, value, site=None, bp_group=-1) -> dict:
+        return {
+            "hospitalization_id": hosp_id,
+            "recorded_dttm": ts,
+            "vital_category": cat,
+            "vital_value": value,
+            "meas_site_name": site,
+            "_bp": bp_group,
+        }
 
     def _generate_core_vitals(
         self,
         hospitalization_id: str,
         timestamp: datetime,
-        state: PatientState,
+        course: HospitalCourse,
+        arterial: bool = False,
     ) -> list[dict]:
-        """Generate core vital signs from patient state."""
-        vitals = []
+        """Observe heart rate, blood pressure, SpO2 and respiratory rate."""
+        hr = course.at("hr", timestamp) + self.rng.normal(0, 2)
+        sbp = course.at("sbp", timestamp) + self.rng.normal(0, 2 if arterial else 4)
+        dbp = course.at("dbp", timestamp) + self.rng.normal(0, 1.5 if arterial else 3)
+        dbp = min(dbp, sbp - 10)
+        # MAP is the time-average of the pressure wave: about DBP + pulse pressure / 3
+        mean_ap = dbp + (sbp - dbp) / 3 + self.rng.normal(0, 1.5)
+        mean_ap = float(np.clip(mean_ap, dbp + 1, sbp - 1))
+        site = "Arterial" if arterial else None
+        self._bp_counter = getattr(self, "_bp_counter", 0) + 1
+        g = self._bp_counter
 
-        # Heart rate
-        vitals.append(
-            {
-                "hospitalization_id": hospitalization_id,
-                "recorded_dttm": timestamp,
-                "vital_category": "heart_rate",
-                "vital_value": round(state.heart_rate, 0),
-                "meas_site_name": None,
-            }
-        )
-
-        # Blood pressure
-        vitals.append(
-            {
-                "hospitalization_id": hospitalization_id,
-                "recorded_dttm": timestamp,
-                "vital_category": "sbp",
-                "vital_value": round(state.sbp, 0),
-                "meas_site_name": self.rng.choice(
-                    ["Arterial", None], p=[0.2, 0.8]
-                ),
-            }
-        )
-
-        vitals.append(
-            {
-                "hospitalization_id": hospitalization_id,
-                "recorded_dttm": timestamp,
-                "vital_category": "dbp",
-                "vital_value": round(state.dbp, 0),
-                "meas_site_name": self.rng.choice(
-                    ["Arterial", None], p=[0.2, 0.8]
-                ),
-            }
-        )
-
-        # MAP (sometimes calculated, sometimes measured)
-        if self.rng.random() < 0.7:
-            vitals.append(
-                {
-                    "hospitalization_id": hospitalization_id,
-                    "recorded_dttm": timestamp,
-                    "vital_category": "map",
-                    "vital_value": round(state.map_value, 0),
-                    "meas_site_name": None,
-                }
-            )
-
-        # SpO2
-        vitals.append(
-            {
-                "hospitalization_id": hospitalization_id,
-                "recorded_dttm": timestamp,
-                "vital_category": "spo2",
-                "vital_value": round(state.spo2, 0),
-                "meas_site_name": None,
-            }
-        )
-
-        # Respiratory rate
-        vitals.append(
-            {
-                "hospitalization_id": hospitalization_id,
-                "recorded_dttm": timestamp,
-                "vital_category": "respiratory_rate",
-                "vital_value": round(state.respiratory_rate, 0),
-                "meas_site_name": None,
-            }
-        )
-
+        vitals = [
+            self._row(hospitalization_id, timestamp, "heart_rate", round(hr, 0)),
+            self._row(hospitalization_id, timestamp, "sbp", round(sbp, 0), site, g),
+            self._row(hospitalization_id, timestamp, "dbp", round(dbp, 0), site, g),
+        ]
+        if arterial or self.rng.random() < 0.9:
+            vitals.append(self._row(hospitalization_id, timestamp, "map", round(mean_ap, 0), site, g))
+        spo2 = float(np.clip(course.at("spo2", timestamp) + self.rng.normal(0, 1.0), 50, 100))
+        vitals.append(self._row(hospitalization_id, timestamp, "spo2", round(spo2, 0)))
+        rr = course.at("rr", timestamp) + self.rng.normal(0, 1.0)
+        vitals.append(self._row(hospitalization_id, timestamp, "respiratory_rate", round(max(rr, 4), 0)))
         return vitals
 
     def _generate_height_weight(
         self,
         hospitalization_id: str,
         timestamp: datetime,
+        course: HospitalCourse,
     ) -> list[dict]:
-        """Generate height and weight measurements."""
-        height = self.rng.normal(170, 10)
-        height = np.clip(height, 140, 210)
-
-        # Weight correlates with height (BMI typically 20-35)
-        bmi = self.rng.normal(27, 5)
-        bmi = np.clip(bmi, 18, 45)
-        weight = bmi * (height / 100) ** 2
-
+        """Admission height and weight (the same body the ventilator settings assume)."""
         return [
-            {
-                "hospitalization_id": hospitalization_id,
-                "recorded_dttm": timestamp,
-                "vital_category": "height_cm",
-                "vital_value": round(height, 1),
-                "meas_site_name": None,
-            },
-            {
-                "hospitalization_id": hospitalization_id,
-                "recorded_dttm": timestamp,
-                "vital_category": "weight_kg",
-                "vital_value": round(weight, 1),
-                "meas_site_name": None,
-            },
+            self._row(hospitalization_id, timestamp, "height_cm", course.height_cm),
+            self._row(hospitalization_id, timestamp, "weight_kg", course.weight_kg),
         ]

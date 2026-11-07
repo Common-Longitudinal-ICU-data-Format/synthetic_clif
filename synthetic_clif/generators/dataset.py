@@ -227,22 +227,28 @@ class SyntheticCLIFDataset:
         self._tables["adt"] = adt
         _log("adt", t, len(adt))
 
+        # Time-series generators observe one shared course per stay
+        # (synthetic_clif.physiology). The course seed and sex ride along on a
+        # private copy of the hospitalization table; the published table is
+        # unchanged.
+        course_hosps = self._course_hospitalizations(hospitalizations, patients)
+
         # Generate big-3 time-series tables (vitals, labs, respiratory)
         if self.workers > 1:
-            self._generate_big3_parallel(hospitalizations, adt, _log)
+            self._generate_big3_parallel(course_hosps, adt, _log)
         else:
             t = time.time()
-            vitals = self.vitals_gen.generate(hospitalizations, adt)
+            vitals = self.vitals_gen.generate(course_hosps, adt)
             self._tables["vitals"] = vitals
             _log("vitals", t, len(vitals))
 
             t = time.time()
-            labs = self.labs_gen.generate(hospitalizations)
+            labs = self.labs_gen.generate(course_hosps)
             self._tables["labs"] = labs
             _log("labs", t, len(labs))
 
             t = time.time()
-            respiratory = self.respiratory_gen.generate(hospitalizations)
+            respiratory = self.respiratory_gen.generate(course_hosps)
             self._tables["respiratory_support"] = respiratory
             _log("respiratory_support", t, len(respiratory))
 
@@ -250,7 +256,7 @@ class SyntheticCLIFDataset:
         respiratory = self._tables["respiratory_support"]
 
         t = time.time()
-        med_continuous = self.med_continuous_gen.generate(hospitalizations, respiratory)
+        med_continuous = self.med_continuous_gen.generate(course_hosps, respiratory)
         self._tables["medication_admin_continuous"] = med_continuous
         _log("medication_admin_continuous", t, len(med_continuous))
 
@@ -377,6 +383,20 @@ class SyntheticCLIFDataset:
         _log(f"  Total: {total_rows:,} rows across {len(self._tables)} tables [{total_elapsed:.2f}s]")
 
         return self._tables
+
+    def _course_hospitalizations(self, hospitalizations, patients) -> pd.DataFrame:
+        """Hospitalizations plus the private columns the course needs."""
+        from synthetic_clif.physiology import course_seed_for
+
+        df = hospitalizations.copy()
+        df["_course_seed"] = [
+            course_seed_for(self.seed, h) for h in df["hospitalization_id"]
+        ]
+        if "sex_category" in patients.columns and "patient_id" in df.columns:
+            sex = patients.set_index("patient_id")["sex_category"]
+            sex = sex[~sex.index.duplicated()]
+            df["_sex"] = df["patient_id"].map(sex)
+        return df
 
     def _generate_big3_parallel(self, hospitalizations, adt, _log):
         """Generate vitals, labs, and respiratory in parallel.
