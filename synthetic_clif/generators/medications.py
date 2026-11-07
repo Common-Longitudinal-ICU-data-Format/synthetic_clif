@@ -2,7 +2,6 @@
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-import uuid
 
 import numpy as np
 import pandas as pd
@@ -184,7 +183,8 @@ class MedicationContinuousGenerator(BaseGenerator):
         params = self.MED_PARAMS[med]
         order_id = self._order_id()
         t0 = course.admit_time
-        limit = course.n_hours - 2
+        # last charting just before discharge (n_hours runs past it)
+        limit = min(course.n_hours - 2, course.los_h - 0.05) if course.los_h else course.n_hours - 2
         end_h = min(end_h, limit)
         if end_h - start_h < 0.5:
             return []
@@ -261,15 +261,18 @@ class MedicationContinuousGenerator(BaseGenerator):
             rec += self._chart_run(hosp_id, course, "dobutamine", s + self.rng.uniform(0.5, 2), e,
                                    lambda hh: dobu_dose)
 
-        # Sedation and analgesia for each IMV episode, stopped around extubation
+        # Sedation and analgesia for each IMV episode, stopped around extubation.
+        # Doses follow the course's sedation depth, which also sets RASS.
         for s, e in course.imv_episodes:
             if e - s < 4:
                 continue
             for med in (course.sedative, course.analgesic):
                 lo, hi = self.MED_PARAMS[med]["dose_range"]
                 step = self.MED_PARAMS[med]["titration"]
-                n_steps = int(e - s) + 2
-                walk = np.clip(lo + (hi - lo) * 0.35 + np.cumsum(self.rng.choice([-1, 0, 0, 0, 1], n_steps)) * step, lo, hi)
+                depth = course.sed_depth[s:min(e + 2, course.n_hours)]
+                depth = np.concatenate([depth, np.repeat(depth[-1:], max(0, int(e - s) + 2 - len(depth)))])
+                target = lo + (hi - lo) * (0.1 + 0.7 * depth)
+                walk = np.clip(np.round(target / step) * step, lo, hi)
                 if med == "propofol" and (ne[s:e] > 0).any():  # lighter propofol on vasopressors
                     walk = np.maximum(walk * 0.7, lo)
                 start = s + self.rng.uniform(0, 1)
@@ -471,9 +474,14 @@ class MedicationIntermittentGenerator(BaseGenerator):
             if pd.isna(discharge_time):
                 discharge_time = admit_time + timedelta(days=5)
 
-            hosp_meds = self._generate_hospitalization_meds(
-                hosp_id, admit_time, discharge_time
-            )
+            course = course_for_row(hosp)
+            if course is None:
+                hosp_meds = self._generate_hospitalization_meds(hosp_id, admit_time, discharge_time)
+            else:
+                hosp_meds = self._course_meds(
+                    hosp_id, admit_time, discharge_time, course,
+                    str(hosp.get("admission_type_category") or ""),
+                )
             records.extend(hosp_meds)
 
         df = pd.DataFrame(records)
@@ -482,6 +490,108 @@ class MedicationIntermittentGenerator(BaseGenerator):
             df["admin_dttm"] = pd.to_datetime(df["admin_dttm"], utc=True)
 
         return df
+
+    # Usual interval (h) with normal and reduced kidney function
+    ABX_INTERVAL = {
+        "vancomycin": (12, 24),
+        "piperacillin_tazobactam": (6, 8),
+        "cefepime": (8, 12),
+        "meropenem": (8, 12),
+    }
+
+    def _dose_row(self, hosp_id, order_id, ts, med, dose, route, action=None) -> dict:
+        params = self.MED_SCHEDULES[med]
+        if action is None:
+            action = str(self.rng.choice(["given", "not_given", "other"], p=[0.95, 0.04, 0.01]))
+        mar_group = "administered" if action in ("given", "bolus") else (
+            "not_administered" if action == "not_given" else "other")
+        return {
+            "hospitalization_id": hosp_id,
+            "med_order_id": order_id,
+            "admin_dttm": ts,
+            "med_category": med,
+            "med_name": med.replace("_", "-").title(),
+            "med_group": self._get_med_group_intermittent(params["indication"]),
+            "med_dose": float(dose),
+            "med_dose_unit": params["unit"],
+            "med_route_category": route,
+            "med_route_name": self.name_from_category(route),
+            "mar_action_category": action,
+            "mar_action_name": self.name_from_category(action),
+            "mar_action_group": mar_group,
+        }
+
+    def _order_id(self) -> str:
+        return f"{int(self.rng.integers(0, 16**8)):08x}"
+
+    def _course_meds(self, hosp_id, admit_time, discharge_time, course, admission_type) -> list[dict]:
+        """Intermittent doses that follow the course.
+
+        Antibiotics run from infection recognition for the course's duration,
+        dosed by weight and spaced out when the kidneys fail; acetaminophen is
+        given for fever; opioids for pain in patients who are awake; ketamine
+        at intubation.
+        """
+        rows = []
+        n = course.n_hours
+        at = lambda h: admit_time + timedelta(hours=float(h))
+        npo = (course.level >= 3) | (course.severity > 0.7)
+
+        for abx in course.antibiotics:
+            med = abx["agent"]
+            oid = self._order_id()
+            normal, reduced = self.ABX_INTERVAL[med]
+            if med == "vancomycin":
+                dose = float(np.clip(round(17.5 * course.weight_kg / 250) * 250, 750, 2500))
+            else:
+                dose = {"piperacillin_tazobactam": 4500, "cefepime": 2000, "meropenem": 1000}[med]
+            h = abx["start"]
+            while h < abx["end"] and at(h) < discharge_time:
+                if med == "vancomycin" and h == abx["start"]:
+                    give = float(min(round(25 * course.weight_kg / 250) * 250, 3000))  # loading dose
+                else:
+                    give = dose
+                rows.append(self._dose_row(hosp_id, oid, at(h), med, give, "iv"))
+                i = min(int(h), n - 1)
+                kidney_low = course.aki[i] > 0.5 and course.crrt_effect(i) < 0.5
+                h += (reduced if kidney_low else normal) + self.rng.uniform(-0.5, 0.5)
+
+        # Acetaminophen for fever (at most every 6 h), scheduled after surgery
+        apap_oid, last = self._order_id(), -99.0
+        for i in range(n):
+            febrile = course.temp[i] > 38.3
+            post_op = admission_type == "elective" and i < 72 and i % 6 == 0
+            if (febrile or post_op) and i - last >= 6 and at(i) < discharge_time:
+                route = "iv" if npo[i] and course.level[i] != 4 else "enteral"
+                rows.append(self._dose_row(hosp_id, apap_oid, at(i + self.rng.uniform(0, 1)),
+                                           "acetaminophen", 650 if course.weight_kg < 60 else 1000, route))
+                last = i
+
+        # Hydromorphone for pain in patients who can ask for it
+        hm_oid = self._order_id()
+        pain_prone = 0.08 + 0.25 * (admission_type == "elective")
+        for i in range(0, n, 4):
+            if course.level[i] < 4 and course.rass[i] >= -1 and self.rng.random() < pain_prone:
+                if at(i) < discharge_time:
+                    rows.append(self._dose_row(hosp_id, hm_oid, at(i + self.rng.uniform(0, 3)),
+                                               "hydromorphone", float(self.rng.choice([0.5, 1.0, 2.0])), "iv"))
+
+        # Ketamine as an induction agent at intubation
+        for s, _ in course.imv_episodes:
+            if s > 0 and self.rng.random() < 0.4:
+                rows.append(self._dose_row(hosp_id, self._order_id(), at(s - self.rng.uniform(0, 0.2)),
+                                           "ketamine", float(round(1.5 * course.weight_kg / 10) * 10), "iv",
+                                           action="given"))
+
+        # Diphenhydramine as needed for a few patients (itch, sleep)
+        if self.rng.random() < 0.1:
+            dph_oid = self._order_id()
+            for _ in range(int(self.rng.integers(1, 4))):
+                h = self.rng.uniform(0, n - 1)
+                if at(h) < discharge_time:
+                    rows.append(self._dose_row(hosp_id, dph_oid, at(h), "diphenhydramine", 25.0, "iv"))
+        # jittered dose times can land just past discharge
+        return [r for r in rows if r["admin_dttm"] < discharge_time]
 
     def _generate_hospitalization_meds(
         self,

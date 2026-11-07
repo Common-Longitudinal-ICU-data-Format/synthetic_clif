@@ -8,6 +8,7 @@ import pandas as pd
 
 from synthetic_clif.generators.base import BaseGenerator
 from synthetic_clif.config.mcide import MCIDELoader
+from synthetic_clif.physiology.course import course_for_row
 from synthetic_clif.utils.timestamps import generate_irregular_timestamps
 
 
@@ -39,10 +40,10 @@ class CodeStatusGenerator(BaseGenerator):
             if pd.isna(discharge_time):
                 discharge_time = admit_time + timedelta(days=5)
 
-            is_terminal = discharge_category == "Expired"
-            hosp_codes = self._generate_hospitalization_codes(
-                patient_id, admit_time, discharge_time, is_terminal
-            )
+            course = course_for_row(hosp)
+            if course is None:
+                continue
+            hosp_codes = self._course_codes(patient_id, admit_time, discharge_time, course)
             records.extend(hosp_codes)
 
         df = pd.DataFrame(records)
@@ -52,80 +53,23 @@ class CodeStatusGenerator(BaseGenerator):
 
         return df
 
-    def _generate_hospitalization_codes(
-        self,
-        patient_id: str,
-        admit_time: datetime,
-        discharge_time: datetime,
-        is_terminal: bool,
-    ) -> list[dict]:
-        """Generate code status changes for one hospitalization."""
-        records = []
-        los_hours = (discharge_time - admit_time).total_seconds() / 3600
-
-        # CLIF 2.1.0 code_status_category values:
-        # DNR, DNAR, UDNR, DNR/DNI, DNAR/DNI, AND, Full, Presume Full, Other
-        if is_terminal:
-            initial_status = self.rng.choice(
-                ["Full", "DNR", "DNR/DNI"],
-                p=[0.6, 0.2, 0.2],
-            )
-        else:
-            initial_status = self.rng.choice(
-                ["Full", "Presume Full", "DNR", "DNR/DNI"],
-                p=[0.80, 0.10, 0.06, 0.04],
-            )
-
-        records.append(
-            {
+    def _course_codes(self, patient_id, admit_time, discharge_time, course) -> list[dict]:
+        """Code status from the course: older patients arrive DNR more often,
+        and most deaths follow a change to DNR, then comfort care."""
+        events = list(course.code_status)
+        if course.comfort_h is not None:
+            t = max(course.comfort_h - self.rng.uniform(0, 1), events[-1][0] + 0.25)
+            events.append((t, "Other"))  # comfort measures only
+        rows = []
+        for h, cat in events:
+            ts = min(admit_time + timedelta(hours=float(h)), discharge_time)
+            rows.append({
                 "patient_id": patient_id,
-                "start_dttm": admit_time,
-                "code_status_category": initial_status,
-                "code_status_name": self.name_from_category(initial_status),
-            }
-        )
-
-        current_status = initial_status
-
-        if is_terminal and current_status in ["Full", "Presume Full"]:
-            transition_time = admit_time + timedelta(
-                hours=self.rng.uniform(los_hours * 0.5, los_hours * 0.9)
-            )
-
-            if self.rng.random() < 0.5:
-                records.append(
-                    {
-                        "patient_id": patient_id,
-                        "start_dttm": transition_time,
-                        "code_status_category": "DNR/DNI",
-                        "code_status_name": self.name_from_category("DNR/DNI"),
-                    }
-                )
-                transition_time += timedelta(hours=self.rng.uniform(2, 24))
-
-            records.append(
-                {
-                    "patient_id": patient_id,
-                    "start_dttm": transition_time,
-                    "code_status_category": "Other",
-                    "code_status_name": self.name_from_category("Other"),
-                }
-            )
-
-        elif not is_terminal and current_status not in ["Full", "Presume Full"]:
-            if los_hours >= 48 and self.rng.random() < 0.2:
-                upper_bound = max(25, los_hours * 0.5)
-                records.append(
-                    {
-                        "patient_id": patient_id,
-                        "start_dttm": admit_time
-                        + timedelta(hours=self.rng.uniform(24, upper_bound)),
-                        "code_status_category": "Full",
-                        "code_status_name": self.name_from_category("Full"),
-                    }
-                )
-
-        return records
+                "start_dttm": ts,
+                "code_status_category": cat,
+                "code_status_name": self.name_from_category(cat),
+            })
+        return rows
 
 
 class PositionGenerator(BaseGenerator):
@@ -142,8 +86,6 @@ class PositionGenerator(BaseGenerator):
         """Generate patient position data."""
         records = []
 
-        vent_lookup = self._build_ventilation_lookup(respiratory_df)
-
         for _, hosp in hospitalizations_df.iterrows():
             hosp_id = hosp["hospitalization_id"]
             admit_time = hosp["admission_dttm"]
@@ -155,11 +97,8 @@ class PositionGenerator(BaseGenerator):
             if pd.isna(discharge_time):
                 discharge_time = admit_time + timedelta(days=5)
 
-            is_ventilated = vent_lookup.get(hosp_id, False)
-            hosp_positions = self._generate_hospitalization_positions(
-                hosp_id, admit_time, discharge_time, is_ventilated
-            )
-            records.extend(hosp_positions)
+            course = course_for_row(hosp)
+            records.extend(self._course_positions(hosp_id, admit_time, discharge_time, course))
 
         df = pd.DataFrame(records)
 
@@ -168,78 +107,26 @@ class PositionGenerator(BaseGenerator):
 
         return df
 
-    def _build_ventilation_lookup(
-        self, respiratory_df: Optional[pd.DataFrame]
-    ) -> dict[str, bool]:
-        """Build lookup for ventilation status."""
-        if respiratory_df is None or len(respiratory_df) == 0:
-            return {}
-
-        lookup = {}
-        for hosp_id in respiratory_df["hospitalization_id"].unique():
-            hosp_resp = respiratory_df[
-                respiratory_df["hospitalization_id"] == hosp_id
-            ]
-            is_vent = (hosp_resp["device_category"] == "IMV").any()
-            lookup[hosp_id] = is_vent
-
-        return lookup
-
-    def _generate_hospitalization_positions(
-        self,
-        hospitalization_id: str,
-        admit_time: datetime,
-        discharge_time: datetime,
-        is_ventilated: bool,
-    ) -> list[dict]:
-        """Generate positions for one hospitalization."""
-        records = []
-
-        # Determine if patient receives prone positioning (~10% of ventilated)
-        has_prone = is_ventilated and self.rng.random() < 0.10
-
-        if has_prone:
-            timestamps = generate_irregular_timestamps(
-                admit_time,
-                discharge_time,
-                mean_interval_hours=8,
-                cv=0.3,
-                rng=self.rng,
-            )
-
-            is_prone = False
-            for ts in timestamps:
-                position = "prone" if not is_prone else "not_prone"
-                is_prone = not is_prone
-
-                records.append(
-                    {
-                        "hospitalization_id": hospitalization_id,
-                        "recorded_dttm": ts,
-                        "position_category": position,
-                        "position_name": self.name_from_category(position),
-                    }
-                )
-        else:
-            timestamps = generate_irregular_timestamps(
-                admit_time,
-                discharge_time,
-                mean_interval_hours=2,
-                cv=0.4,
-                rng=self.rng,
-            )
-
-            for ts in timestamps:
-                records.append(
-                    {
-                        "hospitalization_id": hospitalization_id,
-                        "recorded_dttm": ts,
-                        "position_category": "not_prone",
-                        "position_name": self.name_from_category("not_prone"),
-                    }
-                )
-
-        return records
+    def _course_positions(self, hosp_id, admit_time, discharge_time, course) -> list[dict]:
+        """Position charted every ~2 h, plus each turn into and out of prone."""
+        times = list(generate_irregular_timestamps(admit_time, discharge_time, mean_interval_hours=2,
+                                                   cv=0.4, rng=self.rng))
+        prone = course.prone
+        for i in range(1, course.n_hours):
+            if prone[i] != prone[i - 1]:
+                ts = admit_time + timedelta(hours=i + self.rng.uniform(0, 0.25))
+                if ts < discharge_time:
+                    times.append(ts)
+        rows = []
+        for ts in sorted(times):
+            cat = "prone" if prone[course.hour_index(ts)] else "not_prone"
+            rows.append({
+                "hospitalization_id": hosp_id,
+                "recorded_dttm": ts,
+                "position_category": cat,
+                "position_name": self.name_from_category(cat),
+            })
+        return rows
 
 
 class CRRTTherapyGenerator(BaseGenerator):
@@ -264,12 +151,10 @@ class CRRTTherapyGenerator(BaseGenerator):
             if pd.isna(discharge_time):
                 discharge_time = admit_time + timedelta(days=5)
 
-            if self.rng.random() > crrt_rate:
+            course = course_for_row(hosp)
+            if course is None or not course.crrt.any():
                 continue
-
-            hosp_crrt = self._generate_hospitalization_crrt(
-                hosp_id, admit_time, discharge_time
-            )
+            hosp_crrt = self._course_crrt(hosp_id, admit_time, discharge_time, course)
             records.extend(hosp_crrt)
 
         df = pd.DataFrame(records)
@@ -279,72 +164,49 @@ class CRRTTherapyGenerator(BaseGenerator):
 
         return df
 
-    def _generate_hospitalization_crrt(
-        self,
-        hospitalization_id: str,
-        admit_time: datetime,
-        discharge_time: datetime,
-    ) -> list[dict]:
-        """Generate CRRT data for one hospitalization."""
-        records = []
-        los_hours = (discharge_time - admit_time).total_seconds() / 3600
+    def _course_crrt(self, hosp_id, admit_time, discharge_time, course) -> list[dict]:
+        """Hourly CRRT charting while the course is on CRRT.
 
-        if los_hours < 48:
-            return records
-
-        start_max = max(12, min(72, los_hours * 0.3))
-        crrt_start = admit_time + timedelta(
-            hours=self.rng.uniform(12, start_max) if start_max > 12 else 12
-        )
-
-        remaining_hours = (discharge_time - crrt_start).total_seconds() / 3600
-        if remaining_hours < 24:
-            return records
-
-        crrt_duration = min(
-            self.rng.uniform(48, 168), remaining_hours * 0.9
-        )
-        crrt_end = crrt_start + timedelta(hours=crrt_duration)
-
-        timestamps = generate_irregular_timestamps(
-            crrt_start,
-            crrt_end,
-            mean_interval_hours=1,
-            cv=0.2,
-            rng=self.rng,
-        )
-
-        # CLIF 2.1.0 mode values: scuf, cvvh, cvvhd, cvvhdf, avvh
-        mode = self.rng.choice(["cvvh", "cvvhd", "cvvhdf"], p=[0.3, 0.2, 0.5])
-
-        dialysis_machines = ["Prismaflex", "PrisMax", "NxStage", "Aquarius"]
-
-        for ts in timestamps:
-            record = {
-                "hospitalization_id": hospitalization_id,
+        One machine per stay, a weight-based effluent dose split by mode, and
+        net fluid removal held while the patient needs vasopressors.
+        """
+        mode = course.crrt_mode
+        machine = str(self.rng.choice(["Prismaflex", "PrisMax", "NxStage", "Aquarius"]))
+        device_id = f"CRRT-{self.rng.integers(1000, 9999)}"
+        qb = float(self.rng.choice([150, 180, 200, 220, 250]))
+        effluent = round(25 * course.weight_kg / 100) * 100   # mL/h, ~25 mL/kg/h
+        uf_goal = float(self.rng.choice([50, 75, 100, 150]))
+        rows = []
+        for i in np.nonzero(course.crrt)[0]:
+            if self.rng.random() < 0.08:   # filter clotted or paused
+                continue
+            ts = admit_time + timedelta(hours=float(i) + self.rng.uniform(0, 0.3))
+            if ts >= discharge_time:
+                break
+            if self.rng.random() < 0.03:
+                qb = float(np.clip(qb + self.rng.choice([-20, 20]), 120, 300))
+            uf = 0.0 if course.ne_eq[i] > 0.2 else uf_goal
+            rec = {
+                "hospitalization_id": hosp_id,
                 "recorded_dttm": ts,
-                "device_id": f"CRRT-{self.rng.integers(1000, 9999)}",
+                "device_id": device_id,
                 "crrt_mode_category": mode,
                 "crrt_mode_name": self.name_from_category(mode),
-                "dialysis_machine_name": self.rng.choice(dialysis_machines),
-                "blood_flow_rate": round(self.rng.uniform(150, 250), 0),
+                "dialysis_machine_name": machine,
+                "blood_flow_rate": qb,
                 "pre_filter_replacement_fluid_rate": None,
                 "post_filter_replacement_fluid_rate": None,
                 "dialysate_flow_rate": None,
-                "ultrafiltration_out": round(self.rng.uniform(50, 200), 0),
+                "ultrafiltration_out": uf,
             }
-
-            if mode in ["cvvhd", "cvvhdf"]:
-                record["dialysate_flow_rate"] = round(self.rng.uniform(1000, 2000), 0)
-
-            if mode in ["cvvh", "cvvhdf"]:
-                record["pre_filter_replacement_fluid_rate"] = round(
-                    self.rng.uniform(500, 1500), 0
-                )
-                record["post_filter_replacement_fluid_rate"] = round(
-                    self.rng.uniform(500, 1500), 0
-                )
-
-            records.append(record)
-
-        return records
+            if mode == "cvvhd":
+                rec["dialysate_flow_rate"] = float(effluent)
+            elif mode == "cvvh":
+                rec["pre_filter_replacement_fluid_rate"] = float(round(effluent * 0.6, -1))
+                rec["post_filter_replacement_fluid_rate"] = float(round(effluent * 0.4, -1))
+            else:
+                rec["dialysate_flow_rate"] = float(round(effluent * 0.5, -1))
+                rec["pre_filter_replacement_fluid_rate"] = float(round(effluent * 0.3, -1))
+                rec["post_filter_replacement_fluid_rate"] = float(round(effluent * 0.2, -1))
+            rows.append(rec)
+        return rows

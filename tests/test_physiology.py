@@ -177,3 +177,156 @@ class TestCourse:
         imv = set(rs.loc[rs["device_category"] == "IMV", "hospitalization_id"])
         sed = set(mac.loc[mac["med_group"] == "sedation", "hospitalization_id"]) if len(mac) else set()
         assert sed <= imv
+
+
+@pytest.fixture(scope="module")
+def big_tables():
+    """Larger 2.1 dataset, so rarer events (transfusion, CRRT, PA catheters) occur."""
+    ds = SyntheticCLIFDataset(n_patients=220, n_hospitalizations=300, seed=21, clif_version="2.1")
+    return ds.generate(verbose=False)
+
+
+class TestOutcomes:
+    def test_death_follows_illness(self, big_tables):
+        h = big_tables["hospitalization"]
+        died = h["discharge_category"].str.lower() == "expired"
+        assert 0.04 < died.mean() < 0.25
+        rs = big_tables["respiratory_support"]
+        imv = h["hospitalization_id"].isin(set(rs.loc[rs["device_category"] == "IMV", "hospitalization_id"]))
+        assert died[imv].mean() > 2 * died[~imv].mean()
+
+    def test_only_last_stay_expires_and_death_time_matches(self, big_tables):
+        h = big_tables["hospitalization"].sort_values("admission_dttm")
+        p = big_tables["patient"].set_index("patient_id")
+        dead = h[h["discharge_category"].str.lower() == "expired"]
+        last = h.groupby("patient_id")["hospitalization_id"].last()
+        assert dead["hospitalization_id"].isin(set(last)).all()
+        dd = pd.to_datetime(p.loc[dead["patient_id"], "death_dttm"], utc=True).to_numpy()
+        assert (dd == pd.to_datetime(dead["discharge_dttm"], utc=True).to_numpy()).all()
+
+
+class TestCareProcesses:
+    def test_icu_covers_ventilation(self, big_tables):
+        adt = big_tables["adt"]
+        icu = adt[adt["location_category"].str.lower() == "icu"]
+        rs = big_tables["respiratory_support"]
+        imv = rs[rs["device_category"] == "IMV"][["hospitalization_id", "recorded_dttm"]]
+        m = imv.merge(icu[["hospitalization_id", "in_dttm", "out_dttm"]], on="hospitalization_id")
+        m["inside"] = (m["recorded_dttm"] >= m["in_dttm"]) & (m["recorded_dttm"] <= m["out_dttm"])
+        covered = m.groupby(["hospitalization_id", "recorded_dttm"])["inside"].any()
+        assert covered.mean() > 0.97
+
+    def test_rass_tracks_sedation_and_cam(self, big_tables):
+        pa = big_tables["patient_assessments"]
+        rass = pa[pa["assessment_category"] == "RASS"]
+        assert len(rass)
+        rs = big_tables["respiratory_support"][["hospitalization_id", "recorded_dttm", "device_category"]]
+        r = pd.merge_asof(rass.sort_values("recorded_dttm"), rs.sort_values("recorded_dttm"),
+                          on="recorded_dttm", by="hospitalization_id", direction="backward",
+                          tolerance=pd.Timedelta(hours=2))
+        on = r["device_category"] == "IMV"
+        assert r.loc[on, "numerical_value"].mean() < r.loc[~on, "numerical_value"].mean() - 1
+        cam = pa[pa["assessment_category"].str.contains("cam", case=False)]
+        c = pd.merge_asof(cam.sort_values("recorded_dttm"),
+                          rass[["hospitalization_id", "recorded_dttm", "numerical_value"]]
+                          .rename(columns={"numerical_value": "rass"}).sort_values("recorded_dttm"),
+                          on="recorded_dttm", by="hospitalization_id", direction="nearest",
+                          tolerance=pd.Timedelta(minutes=5)).dropna(subset=["rass"])
+        deep = c["rass"] <= -4
+        assert deep.any()
+        assert c.loc[deep, "categorical_value"].astype(str).str.contains("unable", case=False).mean() > 0.8
+
+    def test_transfusion_follows_low_hemoglobin(self, big_tables):
+        tr = big_tables["transfusion"]
+        rbc = tr[tr["component_name"] == "Packed RBCs"].sort_values("transfusion_start_dttm")
+        assert len(rbc) > 5
+        lb = big_tables["labs"]
+        hg = lb[lb["lab_category"] == "hemoglobin"].sort_values("lab_collect_dttm")
+        m = pd.merge_asof(rbc, hg[["hospitalization_id", "lab_collect_dttm", "lab_value_numeric"]],
+                          left_on="transfusion_start_dttm", right_on="lab_collect_dttm",
+                          by="hospitalization_id", direction="backward").dropna(subset=["lab_value_numeric"])
+        assert m["lab_value_numeric"].median() < 8.0
+        assert hg["lab_value_numeric"].median() > 9.0
+
+    def test_blood_products_match_intake(self, big_tables):
+        tr = big_tables["transfusion"]
+        io = big_tables["intake_output"]
+        blood = io[io["fluid_name"].isin(set(tr["component_name"]))]
+        assert blood["amount"].sum() == pytest.approx(tr["volume_transfused"].sum(), rel=0.01)
+
+    def test_antibiotics_follow_cultures(self, big_tables):
+        mi = big_tables["medication_admin_intermittent"]
+        abx = mi[mi["med_group"] == "CMS_sepsis_qualifying_antibiotics"]
+        cult = big_tables["microbiology_culture"]
+        first_abx = abx.groupby("hospitalization_id")["admin_dttm"].min()
+        first_cx = cult.groupby("hospitalization_id")["collect_dttm"].min()
+        both = pd.concat([first_abx, first_cx], axis=1, keys=["abx", "cx"]).dropna()
+        assert len(both) > 10
+        # cultures are drawn before (or within an hour of) the first dose for most stays
+        assert ((both["cx"] - both["abx"]) < pd.Timedelta(hours=1)).mean() > 0.8
+
+    def test_hemodynamics_only_with_pa_catheter(self, big_tables):
+        ih = big_tables["invasive_hemodynamics"]
+        if ih.empty:
+            pytest.skip("no PA catheters in this sample")
+        w = ih.pivot_table(index=["hospitalization_id", "recorded_dttm"], columns="measure_name",
+                           values="measure_value")
+        assert (w["PA Mean"] > w["PCWP"]).all()
+        ci = w["Cardiac Index"]
+        svr = w["SVR"]
+        assert np.corrcoef(ci, svr)[0, 1] < -0.3
+
+    def test_med_orders_match_administrations(self, big_tables):
+        mo = big_tables["medication_orders"].set_index("med_order_id")
+        mi = big_tables["medication_admin_intermittent"]
+        mc = big_tables["medication_admin_continuous"]
+        ids = set(mi["med_order_id"]) | set(mc["med_order_id"])
+        assert ids == set(mo.index)
+        span = pd.concat([mi, mc]).groupby("med_order_id")["admin_dttm"].agg(["min", "max"])
+        j = span.join(mo[["order_start_dttm", "order_end_dttm"]])
+        assert (j["order_start_dttm"] == j["min"]).all()
+        assert (j["order_end_dttm"] >= j["max"] - pd.Timedelta(minutes=1)).all()
+        adm = pd.concat([mi, mc]).merge(big_tables["hospitalization"][["hospitalization_id", "discharge_dttm"]],
+                                        on="hospitalization_id")
+        assert (adm["admin_dttm"] <= adm["discharge_dttm"]).all()
+
+
+class TestPatientLevel:
+    def test_height_constant_across_stays(self, big_tables):
+        v = big_tables["vitals"]
+        ht = v[v["vital_category"] == "height_cm"].merge(
+            big_tables["hospitalization"][["hospitalization_id", "patient_id"]], on="hospitalization_id")
+        per_stay = ht.groupby(["patient_id", "hospitalization_id"])["vital_value"].median()
+        spread = per_stay.groupby(level=0).agg(lambda x: x.max() - x.min())
+        multi = per_stay.groupby(level=0).size() > 1
+        if not multi.any():
+            pytest.skip("no readmissions")
+        # charted heights include the occasional entry error, so judge the typical patient
+        assert (spread[multi] < 3).mean() > 0.9
+
+    def test_problem_list_matches_course(self, big_tables):
+        pdx = big_tables["patient_diagnosis"]
+        ckd = set(pdx.loc[pdx["diagnosis_code"] == "N18.9", "patient_id"])
+        lb = big_tables["labs"].merge(big_tables["hospitalization"][["hospitalization_id", "patient_id"]],
+                                      on="hospitalization_id")
+        cr = lb[lb["lab_category"] == "creatinine"].groupby("patient_id")["lab_value_numeric"].min()
+        assert cr[cr.index.isin(ckd)].median() > 1.3 * cr[~cr.index.isin(ckd)].median()
+        assert pdx["start_dttm"].max() < pd.Timestamp("2025-01-01", tz="UTC")
+
+
+class TestOrders:
+    def test_consults_follow_course(self, big_tables):
+        k = big_tables["key_icu_orders"]
+        h = big_tables["hospitalization"]
+        dead = set(h.loc[h["discharge_category"].str.lower() == "expired", "hospitalization_id"])
+        pal = set(k.loc[k["order_category"] == "Palliative Care Consult", "hospitalization_id"])
+        assert len(pal & dead) / max(len(dead), 1) > 0.4
+        assert len(pal - dead) / (len(h) - len(dead)) < 0.1
+
+    def test_therapy_sessions_follow_orders(self, big_tables):
+        th = big_tables["therapy_details"]
+        k = big_tables["key_icu_orders"]
+        pt = th[th["therapy_element_category"] == "Physical Therapy"].groupby("hospitalization_id")["session_start_dttm"].min()
+        po = k[k["order_category"] == "PT Evaluation"].groupby("hospitalization_id")["order_dttm"].min()
+        assert set(pt.index) <= set(po.index)
+        assert (pt >= po.reindex(pt.index)).all()

@@ -218,20 +218,25 @@ class SyntheticCLIFDataset:
         _log("patient", t, len(patients))
 
         t = time.time()
-        hospitalizations = self.hosp_gen.generate(patients, self.n_hospitalizations)
+        # Stays are laid out first; who dies, and where survivors go, is then
+        # decided from each stay's clinical course (synthetic_clif.physiology).
+        no_deaths = patients.assign(death_dttm=pd.Series(pd.NaT, index=patients.index, dtype="datetime64[ns, UTC]"))
+        hospitalizations = self.hosp_gen.generate(no_deaths, self.n_hospitalizations)
+        patients, hospitalizations = self._assign_outcomes(patients, hospitalizations)
+        self._tables["patient"] = patients
         self._tables["hospitalization"] = hospitalizations
         _log("hospitalization", t, len(hospitalizations))
 
-        t = time.time()
-        adt = self.adt_gen.generate(hospitalizations)
-        self._tables["adt"] = adt
-        _log("adt", t, len(adt))
-
-        # Time-series generators observe one shared course per stay
+        # Every clinical generator observes one shared course per stay
         # (synthetic_clif.physiology). The course seed and sex ride along on a
         # private copy of the hospitalization table; the published table is
         # unchanged.
         course_hosps = self._course_hospitalizations(hospitalizations, patients)
+
+        t = time.time()
+        adt = self.adt_gen.generate(course_hosps)
+        self._tables["adt"] = adt
+        _log("adt", t, len(adt))
 
         # Generate big-3 time-series tables (vitals, labs, respiratory)
         if self.workers > 1:
@@ -261,12 +266,12 @@ class SyntheticCLIFDataset:
         _log("medication_admin_continuous", t, len(med_continuous))
 
         t = time.time()
-        med_intermittent = self.med_intermittent_gen.generate(hospitalizations)
+        med_intermittent = self.med_intermittent_gen.generate(course_hosps)
         self._tables["medication_admin_intermittent"] = med_intermittent
         _log("medication_admin_intermittent", t, len(med_intermittent))
 
         t = time.time()
-        cultures = self.culture_gen.generate(hospitalizations)
+        cultures = self.culture_gen.generate(course_hosps)
         self._tables["microbiology_culture"] = cultures
         _log("microbiology_culture", t, len(cultures))
 
@@ -276,32 +281,32 @@ class SyntheticCLIFDataset:
         _log("microbiology_susceptibility", t, len(susceptibilities))
 
         t = time.time()
-        assessments = self.assessments_gen.generate(hospitalizations, respiratory)
+        assessments = self.assessments_gen.generate(course_hosps, respiratory)
         self._tables["patient_assessments"] = assessments
         _log("patient_assessments", t, len(assessments))
 
         t = time.time()
-        procedures = self.procedures_gen.generate(hospitalizations)
+        procedures = self.procedures_gen.generate(course_hosps)
         self._tables["patient_procedures"] = procedures
         _log("patient_procedures", t, len(procedures))
 
         t = time.time()
-        diagnoses = self.diagnosis_gen.generate(hospitalizations)
+        diagnoses = self.diagnosis_gen.generate(course_hosps)
         self._tables["hospital_diagnosis"] = diagnoses
         _log("hospital_diagnosis", t, len(diagnoses))
 
         t = time.time()
-        code_status = self.code_status_gen.generate(hospitalizations)
+        code_status = self.code_status_gen.generate(course_hosps)
         self._tables["code_status"] = code_status
         _log("code_status", t, len(code_status))
 
         t = time.time()
-        position = self.position_gen.generate(hospitalizations, respiratory)
+        position = self.position_gen.generate(course_hosps, respiratory)
         self._tables["position"] = position
         _log("position", t, len(position))
 
         t = time.time()
-        crrt = self.crrt_gen.generate(hospitalizations)
+        crrt = self.crrt_gen.generate(course_hosps)
         self._tables["crrt_therapy"] = crrt
         _log("crrt_therapy", t, len(crrt))
 
@@ -312,60 +317,62 @@ class SyntheticCLIFDataset:
 
             t = time.time()
             self._tables["clinical_trial"] = self.clinical_trial_gen.generate(
-                hospitalizations
+                course_hosps
             )
             _log("clinical_trial", t, len(self._tables["clinical_trial"]))
 
             t = time.time()
-            self._tables["ecmo_mcs"] = self.ecmo_gen.generate(hospitalizations)
+            self._tables["ecmo_mcs"] = self.ecmo_gen.generate(course_hosps)
             _log("ecmo_mcs", t, len(self._tables["ecmo_mcs"]))
 
             t = time.time()
-            self._tables["intake_output"] = self.io_gen.generate(hospitalizations)
+            self._tables["intake_output"] = self.io_gen.generate(course_hosps)
             _log("intake_output", t, len(self._tables["intake_output"]))
 
             t = time.time()
             self._tables["invasive_hemodynamics"] = self.hemodynamics_gen.generate(
-                hospitalizations
+                course_hosps
             )
             _log("invasive_hemodynamics", t, len(self._tables["invasive_hemodynamics"]))
 
             t = time.time()
             self._tables["key_icu_orders"] = self.icu_orders_gen.generate(
-                hospitalizations
+                course_hosps
             )
             _log("key_icu_orders", t, len(self._tables["key_icu_orders"]))
 
             t = time.time()
             self._tables["medication_orders"] = self.med_orders_gen.generate(
-                hospitalizations, med_continuous, med_intermittent
+                course_hosps, med_continuous, med_intermittent
             )
             _log("medication_orders", t, len(self._tables["medication_orders"]))
 
             t = time.time()
             self._tables["microbiology_nonculture"] = self.nonculture_gen.generate(
-                hospitalizations
+                course_hosps, include_influenza=self.clif_version == "3.0"
             )
             _log("microbiology_nonculture", t, len(self._tables["microbiology_nonculture"]))
 
             t = time.time()
-            self._tables["patient_diagnosis"] = self.patient_dx_gen.generate(patients, hospitalizations)
+            self._tables["patient_diagnosis"] = self.patient_dx_gen.generate(patients, course_hosps)
             _log("patient_diagnosis", t, len(self._tables["patient_diagnosis"]))
 
             t = time.time()
-            self._tables["place_based_index"] = self.place_index_gen.generate(hospitalizations)
+            self._tables["place_based_index"] = self.place_index_gen.generate(course_hosps)
             _log("place_based_index", t, len(self._tables["place_based_index"]))
 
             t = time.time()
-            self._tables["provider"] = self.provider_gen.generate(hospitalizations)
+            self._tables["provider"] = self.provider_gen.generate(course_hosps)
             _log("provider", t, len(self._tables["provider"]))
 
             t = time.time()
-            self._tables["therapy_details"] = self.therapy_gen.generate(hospitalizations)
+            self._tables["therapy_details"] = self.therapy_gen.generate(
+                course_hosps, orders_df=self._tables.get("key_icu_orders")
+            )
             _log("therapy_details", t, len(self._tables["therapy_details"]))
 
             t = time.time()
-            self._tables["transfusion"] = self.transfusion_gen.generate(hospitalizations)
+            self._tables["transfusion"] = self.transfusion_gen.generate(course_hosps)
             _log("transfusion", t, len(self._tables["transfusion"]))
 
         if self.clif_version == "3.0":
@@ -384,6 +391,60 @@ class SyntheticCLIFDataset:
 
         return self._tables
 
+    def _assign_outcomes(self, patients, hospitalizations):
+        """Decide deaths and discharge destinations from each stay's course.
+
+        Only a patient's last stay can end in death. In-hospital mortality
+        rises with peak illness, organ support and age; survivors' discharge
+        destinations and deaths in the following year follow the same course.
+        """
+        import numpy as np
+
+        from synthetic_clif.physiology import course_for_row, course_seed_for
+        from synthetic_clif.physiology.outcomes import (
+            days_to_death_after_discharge,
+            death_probability,
+            discharge_disposition,
+            outcome_rng,
+        )
+
+        hosp = hospitalizations.copy()
+        pats = patients.copy()
+        if len(hosp) == 0:
+            return pats, hosp
+        sex = pats.set_index("patient_id")["sex_category"]
+        sex = sex[~sex.index.duplicated()]
+        order = hosp.sort_values(["patient_id", "admission_dttm"])
+        last = set(order.groupby("patient_id").tail(1).index)
+
+        categories, deaths = [], {}
+        for idx, row in hosp.iterrows():
+            seed = course_seed_for(self.seed, row["hospitalization_id"])
+            rec = dict(row)
+            rec.update(_course_seed=seed, _sex=sex.get(row["patient_id"]), discharge_category="",
+                       _patient_seed=course_seed_for(self.seed, f"patient:{row['patient_id']}"))
+            course = course_for_row(rec)
+            rng = outcome_rng(seed)
+            p = death_probability(course)
+            if idx in last and rng.random() < p:
+                categories.append("Expired")
+                deaths[row["patient_id"]] = row["discharge_dttm"]
+                continue
+            cat = discharge_disposition(course, rng, p)
+            categories.append(cat)
+            if idx in last:
+                days = days_to_death_after_discharge(course, rng, cat, p)
+                if days is not None:
+                    deaths[row["patient_id"]] = row["discharge_dttm"] + pd.Timedelta(days=days)
+
+        named = hosp["discharge_name"].notna()
+        hosp["discharge_category"] = categories
+        hosp["discharge_name"] = np.where(
+            named, hosp["discharge_category"].str.lower().str.replace(" ", "_"), None
+        )
+        pats["death_dttm"] = pd.to_datetime(pats["patient_id"].map(deaths), utc=True)
+        return pats, hosp
+
     def _course_hospitalizations(self, hospitalizations, patients) -> pd.DataFrame:
         """Hospitalizations plus the private columns the course needs."""
         from synthetic_clif.physiology import course_seed_for
@@ -392,6 +453,8 @@ class SyntheticCLIFDataset:
         df["_course_seed"] = [
             course_seed_for(self.seed, h) for h in df["hospitalization_id"]
         ]
+        if "patient_id" in df.columns:
+            df["_patient_seed"] = [course_seed_for(self.seed, f"patient:{p}") for p in df["patient_id"]]
         if "sex_category" in patients.columns and "patient_id" in df.columns:
             sex = patients.set_index("patient_id")["sex_category"]
             sex = sex[~sex.index.duplicated()]

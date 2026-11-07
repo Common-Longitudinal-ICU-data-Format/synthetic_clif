@@ -209,11 +209,8 @@ class VitalsGenerator(BaseGenerator):
                 "discharge_dttm": discharge_time,
             })
 
-        # Arterial line placed when the patient first needs pressors or IMV
+        # Arterial-line readings only while the course has a line in place
         unstable = (course.ne_eq > 0) | (course.level == 4)
-        art_from = None
-        if unstable.any() and self.rng.random() < 0.85:
-            art_from = int(np.argmax(unstable))
 
         timestamps = generate_irregular_timestamps(
             admit_time,
@@ -233,7 +230,7 @@ class VitalsGenerator(BaseGenerator):
                     continue
 
             if self.rng.random() < 0.95:
-                arterial = art_from is not None and h >= art_from
+                arterial = bool(course.art_line[h])
                 records.extend(
                     self._generate_core_vitals(hospitalization_id, ts, course, arterial)
                 )

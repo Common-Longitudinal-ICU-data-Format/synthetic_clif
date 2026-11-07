@@ -2,13 +2,13 @@
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-import uuid
 
 import numpy as np
 import pandas as pd
 
 from synthetic_clif.generators.base import BaseGenerator
 from synthetic_clif.config.mcide import MCIDELoader
+from synthetic_clif.physiology.course import course_for_row
 
 
 class PatientProceduresGenerator(BaseGenerator):
@@ -108,8 +108,10 @@ class PatientProceduresGenerator(BaseGenerator):
             if pd.isna(discharge_time):
                 discharge_time = admit_time + timedelta(days=5)
 
-            hosp_procedures = self._generate_hospitalization_procedures(
-                hosp_id, admit_time, discharge_time
+            course = course_for_row(hosp)
+            hosp_procedures = self._course_procedures(
+                hosp_id, admit_time, discharge_time, course,
+                str(hosp.get("admission_type_category") or ""),
             )
             records.extend(hosp_procedures)
 
@@ -119,6 +121,85 @@ class PatientProceduresGenerator(BaseGenerator):
             df["procedure_billed_dttm"] = pd.to_datetime(df["procedure_billed_dttm"], utc=True)
 
         return df
+
+    # (ICD-10-PCS, CPT) per course event
+    COURSE_CODES = {
+        "intubation": ("0BH17EZ", "31500"),
+        "art_line": ("03HY32Z", "36620"),
+        "central_line": ("02HV33Z", "36556"),
+        "dialysis_line": ("05HY33Z", "36556"),
+        "pa_catheter": ("02HP32Z", "93503"),
+        "tracheostomy": ("0B110F4", "31600"),
+        "crrt": ("5A1D90Z", "90945"),
+        "VV_ECMO": ("5A1522H", "33946"),
+        "VA_ECMO": ("5A1522G", "33946"),
+        "Impella_CP": ("02HA3RZ", "33990"),
+        "Impella_5.5": ("02HA0RZ", "33990"),
+        "IABP": ("5A02210", "33967"),
+        "Packed RBCs": ("30233N1", "36430"),
+        "Platelets": ("30233R1", "36430"),
+        "Fresh Frozen Plasma": ("30233L1", "36430"),
+        "Cryoprecipitate": ("30233M1", "36430"),
+        "bal": ("0BJ08ZZ", "31624"),
+    }
+    # Mechanical ventilation by duration (ICD-10-PCS only)
+    VENT_DURATION = [(24, "5A1935Z"), (96, "5A1945Z"), (float("inf"), "5A1955Z")]
+
+    def _course_procedures(self, hosp_id, admit_time, discharge_time, course, admission_type) -> list[dict]:
+        """Procedures at the times the course performed them."""
+        if course is None:
+            return self._generate_hospitalization_procedures(hosp_id, admit_time, discharge_time)
+        events = []  # (hour, key or (pcs, cpt))
+        n = course.n_hours
+
+        def starts(mask):
+            return [i for i in range(n) if mask[i] and (i == 0 or not mask[i - 1])]
+
+        for s, e in course.imv_episodes:
+            if s > 0 or admission_type not in ("osh", "facility"):
+                events.append((s, "intubation"))
+            hours = e - s
+            code = next(c for lim, c in self.VENT_DURATION if hours <= lim)
+            events.append((s, (code, None)))
+        trach = np.nonzero(course.trach)[0]
+        if len(trach):
+            events.append((float(trach[0]) - 0.5, "tracheostomy"))
+        for name in ("art_line", "central_line", "dialysis_line", "pa_catheter"):
+            for i in starts(getattr(course, name)):
+                events.append((i, name))
+        crrt = starts(course.crrt)
+        for i in crrt:
+            events.append((i, "crrt"))
+        for m in course.mcs:
+            events.append((m["start"], m["device"]))
+        for tr in course.transfusions:
+            events.append((tr["h"], tr["component"]))
+        for cx in course.cultures:
+            if cx["fluid"] == "respiratory" and course.level[min(int(cx["h"]), n - 1)] == 4 \
+                    and self.rng.random() < 0.3:
+                events.append((cx["h"] - 0.5, "bal"))
+        # Bedside procedures not modelled by the course
+        for pcs, cpt, p in (("0W9930Z", "32551", 0.04), ("0W9G30Z", "49083", 0.04),
+                            ("0W9B30Z", "32555", 0.03), ("009U3ZX", "62270", 0.02)):
+            if self.rng.random() < p:
+                events.append((self.rng.uniform(0, n * 0.8), (pcs, cpt)))
+
+        rows = []
+        for h, key in sorted(events, key=lambda x: x[0]):
+            pcs, cpt = self.COURSE_CODES[key] if isinstance(key, str) else key
+            use_pcs = cpt is None or self.rng.random() < 0.7
+            ts = admit_time + timedelta(hours=float(max(h, 0)) + self.rng.uniform(0, 0.5))
+            if ts > discharge_time:
+                continue
+            rows.append({
+                "hospitalization_id": hosp_id,
+                "procedure_billed_dttm": ts,
+                "procedure_code": pcs if use_pcs else cpt,
+                "procedure_code_format": "ICD10PCS" if use_pcs else "CPT",
+                "billing_provider_id": f"PROV-{self.rng.integers(10000, 99999)}",
+                "performing_provider_id": f"PROV-{self.rng.integers(10000, 99999)}",
+            })
+        return rows
 
     def _generate_hospitalization_procedures(
         self,
@@ -304,10 +385,99 @@ class HospitalDiagnosisGenerator(BaseGenerator):
 
         for _, hosp in hospitalizations_df.iterrows():
             hosp_id = hosp["hospitalization_id"]
-            hosp_diagnoses = self._generate_hospitalization_diagnoses(hosp_id)
+            course = course_for_row(hosp)
+            if course is None:
+                hosp_diagnoses = self._generate_hospitalization_diagnoses(hosp_id)
+            else:
+                hosp_diagnoses = self._course_diagnoses(hosp_id, course)
             records.extend(hosp_diagnoses)
 
         return pd.DataFrame(records)
+
+    INFECTION_CODES = {
+        "pulmonary": "J18.9",
+        "urinary": "N39.0",
+        "bloodstream": "A41.9",
+        "abdominal": "K65.9",
+        "skin": "L03.90",
+    }
+    OTHER_PRINCIPALS = [("I63.9", 0.2), ("K85.9", 0.15), ("I21.4", 0.2), ("T40.2X1A", 0.15),
+                        ("I50.21", 0.15), ("R41.82", 0.15)]
+
+    def _course_diagnoses(self, hosp_id, course) -> list[dict]:
+        """Diagnoses the course supports, coded present-on-admission when
+        they began in the first day."""
+        n = course.n_hours
+        dx = []  # (code, onset_hour, principal_rank)
+
+        def onset(mask):
+            idx = np.nonzero(mask)[0]
+            return float(idx[0]) if len(idx) else None
+
+        shock_h = onset(course.ne_eq > 0)
+        if course.infected:
+            h = course.infection_recognized_h or 0.0
+            src = self.INFECTION_CODES[course.infection_source or "pulmonary"]
+            dx.append(("A41.9", h, 1))
+            dx.append(("R65.21" if shock_h is not None else "R65.20", h, 9))
+            if src != "A41.9":
+                dx.append((src, h, 9))
+        resp_h = onset(course.level >= 3)
+        if resp_h is not None:
+            dx.append(("J96.02" if course.lab_base.get("hypercapnic") else "J96.01", resp_h, 2))
+            if course.lab_base.get("hypercapnic") and self.rng.random() < 0.7:
+                dx.append(("J44.1", resp_h, 3))
+        ards = (course.level == 4) & (course.pf_true < 200)
+        if ards.sum() >= 24:
+            dx.append(("J80", onset(ards), 9))
+        if shock_h is not None and not course.infected:
+            code = {"cardiogenic": "R57.0", "hypovolemic": "R57.1"}.get(course.shock_type, "R57.8")
+            dx.append((code, shock_h, 2))
+        aki_h = onset(course.aki > 0.4)
+        if aki_h is not None:
+            dx.append(("N17.0" if course.crrt.any() else "N17.9", aki_h, 9))
+        if course.bleed.max() > 1.0:
+            dx.append(("K92.2", onset(course.bleed > 0.5), 2))
+        if course.delirium.any():
+            dx.append(("G93.41" if self.rng.random() < 0.5 else "R41.0", onset(course.delirium), 9))
+        if any(t["component"] == "Packed RBCs" for t in course.transfusions):
+            dx.append(("D62", min(t["h"] for t in course.transfusions), 9))
+        if any(t["component"] == "Platelets" for t in course.transfusions):
+            dx.append(("D69.6", 0.0, 9))
+        if course.shock_type == "cardiogenic":
+            dx.append(("I50.21" if self.rng.random() < 0.6 else "I21.4", 0.0, 2))
+        if course.expired and course.comfort_h is None and self.rng.random() < 0.5:
+            dx.append(("I46.9", float(n - 2), 9))
+        # Chronic conditions
+        bmi = course.weight_kg / (course.height_cm / 100) ** 2
+        if course.diabetic:
+            dx.append(("E11.65" if course.insulin.any() else "E11.9", 0.0, 9))
+        if self.rng.random() < 0.3 + 0.006 * max(course.age - 40, 0):
+            dx.append(("I10", 0.0, 9))
+        if bmi >= 30:
+            dx.append(("E66.9" if bmi < 40 else "E66.01", 0.0, 9))
+        if self.rng.random() < 0.1 + 0.004 * max(course.age - 50, 0):
+            dx.append(("I48.91", 0.0, 9))
+        if self.rng.random() < 0.12 + 0.3 * (course.lab_base["creatinine"] > 1.3):
+            dx.append(("N18.3", 0.0, 9))
+        if not any(r <= 3 for _, _, r in dx):
+            codes, w = zip(*self.OTHER_PRINCIPALS)
+            dx.append((str(self.rng.choice(codes, p=np.array(w) / sum(w))), 0.0, 4))
+
+        seen, rows = set(), []
+        principal = min(dx, key=lambda d: d[2])[0]
+        for code, h, _ in dx:
+            if code in seen:
+                continue
+            seen.add(code)
+            rows.append({
+                "hospitalization_id": hosp_id,
+                "diagnosis_code": code,
+                "diagnosis_code_format": "ICD10CM",
+                "diagnosis_primary": int(code == principal),
+                "poa_present": int((h or 0.0) < 24),
+            })
+        return rows
 
     def _generate_hospitalization_diagnoses(
         self,

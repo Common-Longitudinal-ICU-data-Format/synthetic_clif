@@ -59,6 +59,12 @@ python -m synthetic_clif --hospitalizations 100 --output data/v21/ --clif-versio
   the seed is a hash of the hospitalization id, so standalone generators still agree.
   Keep any new per-stay state derivable from the hospitalization row, because parallel
   workers rebuild generators from (seed, mcide_dir) and only see their chunk.
+  `events.py` adds slower clinical decisions to the course (infection and antibiotics,
+  CRRT, proning, MCS, comfort care, lines, sedation/RASS/GCS, fluids, transfusions, code
+  status), each from its own seeded stream so adding one never reshuffles the others.
+  `outcomes.py` decides death and disposition; `SyntheticCLIFDataset._assign_outcomes` writes
+  them before any other table is generated, and `course_for_row` rebuilds an expired stay
+  with a terminal decline. Patient-level traits come from `_patient_seed`.
 - **`synthetic_clif/models/`**: Dataclasses representing CLIF entities and patient state
 - **`synthetic_clif/simulation/`**: Patient trajectory simulation engine
   - Maintains physiologically coherent state across time

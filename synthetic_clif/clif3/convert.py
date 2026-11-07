@@ -363,7 +363,8 @@ class CLIF3Converter:
                     # CentriMag runs at ~2,500-5,500 RPM
                     add("Pump Speed (RPM)", "rpm", v / 10 if v > 10_000 else v)
             elif support == "iabp":
-                add("Augmentation Ratio", "iabp_ratio", 1.0)
+                v = r.control_parameter_value
+                add("Augmentation Ratio", "iabp_ratio", 1.0 if v is None or pd.isna(v) else v)
             elif cp:
                 add(str(r.control_parameter_name), cp, r.control_parameter_value)
         return pd.DataFrame(rows)
@@ -385,6 +386,8 @@ class CLIF3Converter:
             "Promote": "enteral_nutrition",
             "Nepro": "enteral_nutrition",
             "Jevity": "enteral_nutrition",
+            "Glucerna": "enteral_nutrition",
+            "PO Intake": "po_intake",
             "Packed RBCs": "blood_products",
             "Fresh Frozen Plasma": "blood_products",
             "Platelets": "blood_products",

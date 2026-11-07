@@ -1,161 +1,96 @@
-"""Intake/Output generator."""
+"""Intake/Output generator.
 
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+Everything comes from the hospital course, so fluid balance tells the same
+story as the rest of the record:
+
+- crystalloid boluses when shock starts (30 mL/kg for sepsis)
+- maintenance fluid while the patient can't eat, stopped on CRRT
+- tube feeds that start a day or two into ventilation and ramp to goal
+- meals for patients who are eating
+- blood products, with the same volumes as the transfusion table
+- urine output that falls with kidney injury and shock, charted hourly while
+  critically ill and as shift totals otherwise
+"""
+
+from datetime import timedelta
 
 import numpy as np
 import pandas as pd
 
 from synthetic_clif.generators.base import BaseGenerator
-from synthetic_clif.utils.timestamps import generate_irregular_timestamps
+from synthetic_clif.physiology.course import course_for_row
+from synthetic_clif.physiology.events import transfusion_units
 
 
 class IntakeOutputGenerator(BaseGenerator):
-    """Generate synthetic intake/output data.
+    """Generate synthetic intake/output data from the shared course."""
 
-    Creates intake_output table with fluid balance tracking.
-    """
+    COLUMNS = ["hospitalization_id", "intake_dttm", "in_out_flag", "amount", "fluid_name"]
 
-    # IO categories and typical volumes
-    IO_TYPES = {
-        "intake": {
-            "IV Fluids": {"volume_range": (50, 1000), "frequency_hours": 4},
-            "Blood Products": {"volume_range": (200, 350), "frequency_hours": 24},
-            "Enteral Nutrition": {"volume_range": (50, 100), "frequency_hours": 4},
-            "PO Intake": {"volume_range": (100, 500), "frequency_hours": 8},
-        },
-        "output": {
-            "Urine Output": {"volume_range": (50, 300), "frequency_hours": 1},
-            "Drain Output": {"volume_range": (20, 200), "frequency_hours": 8},
-            "Stool": {"volume_range": (100, 500), "frequency_hours": 24},
-            "NG Output": {"volume_range": (50, 300), "frequency_hours": 8},
-        },
-    }
-
-    def generate(
-        self,
-        hospitalizations_df: pd.DataFrame,
-    ) -> pd.DataFrame:
-        """Generate intake/output data.
-
-        Args:
-            hospitalizations_df: Hospitalization table DataFrame
-
-        Returns:
-            DataFrame with intake_output columns
-        """
+    def generate(self, hospitalizations_df: pd.DataFrame) -> pd.DataFrame:
         records = []
-
         for _, hosp in hospitalizations_df.iterrows():
-            hosp_id = hosp["hospitalization_id"]
-            admit_time = hosp["admission_dttm"]
-            discharge_time = hosp["discharge_dttm"]
-
-            if pd.isna(admit_time):
+            course = course_for_row(hosp)
+            if course is None:
                 continue
-
-            if pd.isna(discharge_time):
-                discharge_time = admit_time + timedelta(days=5)
-
-            hosp_io = self._generate_hospitalization_io(
-                hosp_id, admit_time, discharge_time
-            )
-            records.extend(hosp_io)
-
-        df = pd.DataFrame(records)
-
+            admit = hosp["admission_dttm"]
+            discharge = hosp["discharge_dttm"]
+            if pd.isna(discharge):
+                discharge = admit + timedelta(days=5)
+            records.extend(self._stay(hosp["hospitalization_id"], admit, discharge, course))
+        df = pd.DataFrame(records, columns=self.COLUMNS)
         if len(df) > 0:
             df["intake_dttm"] = pd.to_datetime(df["intake_dttm"], utc=True)
-
         return df
 
-    def _generate_hospitalization_io(
-        self,
-        hospitalization_id: str,
-        admit_time: datetime,
-        discharge_time: datetime,
-    ) -> list[dict]:
-        """Generate IO data for one hospitalization."""
-        records = []
+    def _stay(self, hosp_id, admit, discharge, c) -> list[dict]:
+        rows = []
+        n = c.n_hours
 
-        # Generate intake
-        for io_cat, params in self.IO_TYPES["intake"].items():
-            # Not all patients have all intake types
-            if io_cat == "Blood Products" and self.rng.random() > 0.2:
-                continue
-            if io_cat == "PO Intake" and self.rng.random() > 0.5:
-                continue
+        def add(h, flag, amount, name):
+            ts = admit + timedelta(hours=float(h))
+            if ts < discharge and amount > 0:
+                rows.append({"hospitalization_id": hosp_id, "intake_dttm": ts, "in_out_flag": flag,
+                             "amount": float(round(amount)), "fluid_name": name})
 
-            timestamps = generate_irregular_timestamps(
-                admit_time,
-                discharge_time,
-                mean_interval_hours=params["frequency_hours"],
-                cv=0.4,
-                rng=self.rng,
-            )
+        # Boluses
+        for h, fluid, vol in c.fluid_boluses:
+            add(h + 0.5, 1, vol, fluid)
 
-            for ts in timestamps:
-                volume = self.rng.uniform(*params["volume_range"])
-                records.append(
-                    {
-                        "hospitalization_id": hospitalization_id,
-                        "intake_dttm": ts,
-                        "in_out_flag": 1,
-                        "amount": round(volume, 0),
-                        "fluid_name": self._get_fluid_name(io_cat),
-                    }
-                )
+        # Maintenance fluid and tube feeds: totals charted every 4 h
+        mivf_name = str(self.rng.choice(["Lactated Ringers", "Normal Saline", "D5 1/2NS"], p=[0.4, 0.3, 0.3]))
+        if c.ckd or (c.crrt is not None and c.crrt.any()):
+            feed_name = "Nepro"
+        elif c.diabetic:
+            feed_name = "Glucerna"
+        else:
+            feed_name = str(self.rng.choice(["Jevity", "Osmolite", "Promote"]))
+        for b in range(0, n, 4):
+            add(b + 4 - 0.1, 1, c.mivf[b:b + 4].sum(), mivf_name)
+            add(b + 4 - 0.1, 1, c.tube_feed[b:b + 4].sum(), feed_name)
 
-        # Generate output
-        for io_cat, params in self.IO_TYPES["output"].items():
-            # Not all patients have all output types
-            if io_cat == "Drain Output" and self.rng.random() > 0.2:
-                continue
-            if io_cat == "NG Output" and self.rng.random() > 0.15:
-                continue
+        # Meals, with a drink
+        for h, vol in c.meals:
+            add(h + 0.5, 1, vol, "PO Intake")
 
-            timestamps = generate_irregular_timestamps(
-                admit_time,
-                discharge_time,
-                mean_interval_hours=params["frequency_hours"],
-                cv=0.4,
-                rng=self.rng,
-            )
+        # Blood products, charted when each unit finishes
+        for u in transfusion_units(c):
+            add(u["end_h"], 1, u["volume"], u["component"])
 
-            for ts in timestamps:
-                volume = self.rng.uniform(*params["volume_range"])
-                records.append(
-                    {
-                        "hospitalization_id": hospitalization_id,
-                        "intake_dttm": ts,
-                        "in_out_flag": 0,
-                        "amount": round(volume, 0),
-                        "fluid_name": None,
-                    }
-                )
-
-        return records
-
-    def _get_fluid_name(self, io_category: str) -> Optional[str]:
-        """Get specific fluid name for intake category."""
-        if io_category == "IV Fluids":
-            return self.rng.choice([
-                "Normal Saline",
-                "Lactated Ringers",
-                "D5W",
-                "D5 1/2NS",
-            ])
-        elif io_category == "Blood Products":
-            return self.rng.choice([
-                "Packed RBCs",
-                "Fresh Frozen Plasma",
-                "Platelets",
-            ])
-        elif io_category == "Enteral Nutrition":
-            return self.rng.choice([
-                "Jevity",
-                "Osmolite",
-                "Nepro",
-                "Promote",
-            ])
-        return None
+        # Urine: hourly while critically ill, otherwise as 8-hour shift totals
+        crit = (c.level >= 2) | (c.ne_eq > 0) | (c.severity > 0.6)
+        if c.crrt is not None:
+            crit = crit | c.crrt
+        h = 0
+        while h < n:
+            if crit[h]:
+                if self.rng.random() > 0.06:  # occasional missed hour
+                    add(h + 0.9, 0, c.uop[h], "Urine Output")
+                h += 1
+            else:
+                end = min(h + 8 - (h % 8), n)
+                vol = c.uop[h:end].sum()
+                if self.rng.random() > 0.1:  # some voids go unmeasured
+                    add(end - 0.1, 0, vol * self.rng.uniform(0.85, 1.0), "Urine Output")
+                h = end
+        return rows

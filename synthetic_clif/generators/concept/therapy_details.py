@@ -1,111 +1,96 @@
-"""Therapy details generator."""
+"""Therapy details generator.
 
-from datetime import datetime, timedelta, timezone
+Sessions follow the orders and the course. PT, OT and speech start with an
+evaluation after their order in the key ICU orders table, then treatment
+sessions on days the patient is stable (off the ventilator and pressors).
+Respiratory therapy treats patients on oxygen support above a nasal
+cannula, and those on the ventilator.
+"""
+
+from datetime import timedelta
 from typing import Optional
 
+import numpy as np
 import pandas as pd
 
 from synthetic_clif.generators.base import BaseGenerator
+from synthetic_clif.physiology.course import course_for_row
+
+ORDER_TO_THERAPY = {
+    "PT Evaluation": ("Physical Therapy", 0.85, (20, 45)),
+    "OT Evaluation": ("Occupational Therapy", 0.5, (20, 40)),
+    "Speech Evaluation": ("Speech Therapy", 0.5, (15, 30)),
+}
 
 
 class TherapyDetailsGenerator(BaseGenerator):
-    """Generate synthetic therapy session details.
+    """Generate therapy sessions from the orders and the shared course."""
 
-    Creates therapy_details table with PT/OT/Speech sessions.
-    """
+    COLUMNS = ["hospitalization_id", "session_start_dttm", "therapy_element_name",
+               "therapy_element_category", "therapy_element_value"]
 
-    THERAPIES = {
-        "Physical Therapy": {
-            "probability": 0.5,
-            "sessions_per_day": 1,
-            "duration_range": (20, 45),
-        },
-        "Occupational Therapy": {
-            "probability": 0.4,
-            "sessions_per_day": 0.5,
-            "duration_range": (20, 40),
-        },
-        "Speech Therapy": {
-            "probability": 0.2,
-            "sessions_per_day": 0.3,
-            "duration_range": (15, 30),
-        },
-        "Respiratory Therapy": {
-            "probability": 0.6,
-            "sessions_per_day": 2,
-            "duration_range": (10, 30),
-        },
-    }
-
-    def generate(
-        self,
-        hospitalizations_df: pd.DataFrame,
-    ) -> pd.DataFrame:
-        """Generate therapy details.
-
-        Args:
-            hospitalizations_df: Hospitalization table DataFrame
-
-        Returns:
-            DataFrame with therapy_details columns
-        """
+    def generate(self, hospitalizations_df: pd.DataFrame,
+                 orders_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
+        orders = {}
+        if orders_df is not None and len(orders_df):
+            o = orders_df[orders_df["order_category"].isin(ORDER_TO_THERAPY)]
+            for hid, g in o.groupby("hospitalization_id"):
+                orders[hid] = list(zip(g["order_dttm"], g["order_category"]))
         records = []
-
         for _, hosp in hospitalizations_df.iterrows():
-            hosp_id = hosp["hospitalization_id"]
-            admit_time = hosp["admission_dttm"]
-            discharge_time = hosp["discharge_dttm"]
-
-            if pd.isna(admit_time):
+            c = course_for_row(hosp)
+            if c is None:
                 continue
-
-            if pd.isna(discharge_time):
-                discharge_time = admit_time + timedelta(days=5)
-
-            los_days = (discharge_time - admit_time).total_seconds() / (24 * 3600)
-
-            for therapy_type, params in self.THERAPIES.items():
-                if self.rng.random() > params["probability"]:
-                    continue
-
-                # Calculate number of sessions
-                n_sessions = int(los_days * params["sessions_per_day"])
-                if n_sessions == 0 and self.rng.random() < 0.5:
-                    n_sessions = 1
-
-                for i in range(n_sessions):
-                    # Session timing (usually during day)
-                    day_offset = i / max(params["sessions_per_day"], 0.5)
-                    session_time = admit_time + timedelta(
-                        days=day_offset,
-                        hours=self.rng.uniform(8, 16),
-                    )
-
-                    if session_time >= discharge_time:
-                        continue
-
-                    duration = self.rng.integers(
-                        params["duration_range"][0], params["duration_range"][1]
-                    )
-
-                    session_type = self.rng.choice(
-                        ["Evaluation", "Treatment", "Re-evaluation"],
-                        p=[0.2, 0.7, 0.1] if i > 0 else [0.8, 0.15, 0.05],
-                    )
-
-                    records.append(
-                        {
-                            "hospitalization_id": hosp_id,
-                            "session_start_dttm": session_time,
-                            "therapy_element_name": f"{therapy_type} {session_type}",
-                            "therapy_element_category": therapy_type,
-                            "therapy_element_value": f"{duration} minutes",
-                        }
-                    )
-
-        df = pd.DataFrame(records)
-
+            admit = hosp["admission_dttm"]
+            discharge = hosp["discharge_dttm"]
+            if pd.isna(discharge):
+                discharge = admit + timedelta(days=5)
+            hid = hosp["hospitalization_id"]
+            for ts, therapy, kind, minutes in self._sessions(c, admit, discharge, orders.get(hid, [])):
+                records.append({
+                    "hospitalization_id": hid,
+                    "session_start_dttm": ts,
+                    "therapy_element_name": f"{therapy} {kind}",
+                    "therapy_element_category": therapy,
+                    "therapy_element_value": f"{minutes} minutes",
+                })
+        df = pd.DataFrame(records, columns=self.COLUMNS)
         if len(df) > 0:
             df["session_start_dttm"] = pd.to_datetime(df["session_start_dttm"], utc=True)
-
         return df
+
+    def _daytime(self, t):
+        """Next daytime slot (08:00-16:00) at or after t."""
+        t = pd.Timestamp(t)
+        if t.hour >= 16:
+            t = (t + timedelta(days=1)).normalize() + timedelta(hours=8)
+        elif t.hour < 8:
+            t = t.normalize() + timedelta(hours=8)
+        return t + timedelta(minutes=float(self.rng.uniform(0, 90)))
+
+    def _sessions(self, c, admit, discharge, orders):
+        rng = self.rng
+        out = []
+        stable = (c.level < 4) & (c.ne_eq == 0)
+        for order_time, order_cat in sorted(orders):
+            therapy, per_day, (lo, hi) = ORDER_TO_THERAPY[order_cat]
+            t = self._daytime(order_time + timedelta(hours=float(rng.uniform(1, 18))))
+            kind = "Evaluation"
+            while t < discharge:
+                i = min(c.hour_index(t), c.n_hours - 1)
+                if kind == "Evaluation" or (stable[i] and rng.random() < per_day):
+                    minutes = int(rng.integers(lo, hi))
+                    out.append((t, therapy, kind, minutes))
+                    kind = "Re-evaluation" if rng.random() < 0.08 else "Treatment"
+                t = self._daytime(t.normalize() + timedelta(days=1, hours=8))
+
+        # Respiratory therapy: twice a day on high-flow, NIPPV or the ventilator
+        need = c.level >= 2
+        for d0 in range(0, c.n_hours, 12):
+            if need[d0:d0 + 12].any():
+                h = d0 + int(np.argmax(need[d0:d0 + 12])) + rng.uniform(0, 2)
+                t = admit + timedelta(hours=float(h))
+                if t < discharge:
+                    kind = "Evaluation" if not out or all(x[1] != "Respiratory Therapy" for x in out) else "Treatment"
+                    out.append((t, "Respiratory Therapy", kind, int(rng.integers(10, 30))))
+        return out

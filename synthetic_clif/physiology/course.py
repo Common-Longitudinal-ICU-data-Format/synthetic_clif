@@ -72,6 +72,23 @@ def course_seed_for(dataset_seed: int, hospitalization_id) -> int:
     return _stable_hash(f"{int(dataset_seed)}:{hospitalization_id}")
 
 
+def patient_traits(patient_seed: int, sex: str) -> dict:
+    """Chronic traits that belong to the patient, not the stay.
+
+    Height, body size and chronic disease are drawn from a patient-level
+    seed so a readmitted patient keeps them across hospitalizations, and the
+    patient-level diagnosis table can agree with them.
+    """
+    r = np.random.default_rng((int(patient_seed) + _stable_hash("patient")) & 0xFFFFFFFF)
+    height = float(np.clip(r.normal(176 if sex == "male" else 163, 7.5), 140, 210))
+    bmi = float(np.clip(r.normal(28, 6), 16, 55))
+    diabetic = bool(r.random() < 0.25)
+    copd = bool(r.random() < 0.18)
+    ckd = bool(r.random() < 0.15)
+    ckd_factor = float(r.uniform(1.6, 2.6)) if ckd else 1.0
+    return dict(height=height, bmi=bmi, diabetic=diabetic, copd=copd, ckd=ckd, ckd_factor=ckd_factor)
+
+
 def _ou(rng, n, sd, phi):
     """Stationary AR(1) noise on the hourly grid."""
     x = np.empty(n)
@@ -161,6 +178,47 @@ class HospitalCourse:
     # Lab intercepts
     lab_base: dict = field(repr=False, default_factory=dict)
     _lab_daily: dict = field(repr=False, default_factory=dict)
+    # Outcome and patient-level facts
+    expired: bool = False
+    infected: bool = False
+    diabetic: bool = False
+    copd: bool = False
+    ckd: bool = False
+    pf_true: np.ndarray = field(repr=False, default=None)     # PaO2/FiO2 before noise
+    _map_u: np.ndarray = field(repr=False, default=None)      # MAP without pressors
+    _response: float = 1.0
+    # Clinical events built on top of the course (see physiology.events)
+    infection_source: Optional[str] = None
+    pathogen_gram: Optional[str] = None
+    infection_recognized_h: Optional[float] = None
+    cultures: list = field(repr=False, default_factory=list)
+    antibiotics: list = field(repr=False, default_factory=list)
+    bleed: np.ndarray = field(repr=False, default=None)       # cumulative Hgb loss g/dL
+    crrt: np.ndarray = field(repr=False, default=None)        # bool
+    crrt_mode: str = "cvvhdf"
+    prone: np.ndarray = field(repr=False, default=None)       # bool
+    mcs: list = field(repr=False, default_factory=list)       # [{device, start, end}]
+    marrow_failure: bool = False
+    los_h: float = 0.0                                         # admission to discharge, hours
+    comfort_h: Optional[int] = None
+    shock_type: str = "distributive"
+    art_line: np.ndarray = field(repr=False, default=None)    # bool
+    central_line: np.ndarray = field(repr=False, default=None)
+    dialysis_line: np.ndarray = field(repr=False, default=None)
+    pa_catheter: np.ndarray = field(repr=False, default=None)
+    sed_depth: np.ndarray = field(repr=False, default=None)   # 0 light .. 1 deep
+    rass: np.ndarray = field(repr=False, default=None)
+    gcs_eye: np.ndarray = field(repr=False, default=None)
+    gcs_verbal: np.ndarray = field(repr=False, default=None)
+    gcs_motor: np.ndarray = field(repr=False, default=None)
+    delirium: np.ndarray = field(repr=False, default=None)
+    fluid_boluses: list = field(repr=False, default_factory=list)
+    mivf: np.ndarray = field(repr=False, default=None)        # maintenance IV mL/h
+    tube_feed: np.ndarray = field(repr=False, default=None)   # enteral feed mL/h
+    meals: list = field(repr=False, default_factory=list)     # [(h, mL)]
+    uop: np.ndarray = field(repr=False, default=None)         # urine mL/h
+    transfusions: list = field(repr=False, default_factory=list)
+    code_status: list = field(repr=False, default_factory=list)
 
     # ------------------------------------------------------------------
     # Construction
@@ -175,6 +233,7 @@ class HospitalCourse:
         age: Optional[float] = None,
         sex: Optional[str] = None,
         expired: bool = False,
+        patient_seed: Optional[int] = None,
     ) -> "HospitalCourse":
         rng = np.random.default_rng(seed)
         admit_time = pd.Timestamp(admit_time)
@@ -188,13 +247,17 @@ class HospitalCourse:
         sex = str(sex).strip().lower() if sex is not None and not pd.isna(sex) else ""
         if sex not in ("male", "female"):
             sex = "male" if rng.random() < 0.55 else "female"
-        height = float(np.clip(rng.normal(176 if sex == "male" else 163, 7.5), 140, 210))
-        bmi = float(np.clip(rng.normal(28, 6), 16, 55))
+        traits = patient_traits(seed if patient_seed is None else patient_seed, sex)
+        height = traits["height"]
+        bmi = traits["bmi"] * math.exp(rng.normal(0, 0.03))  # weight drifts between stays
         weight = bmi * (height / 100) ** 2
         pbw = (50.0 if sex == "male" else 45.5) + 0.91 * (height - 152.4)
         pbw = max(pbw, 35.0)
 
-        acuity = int(rng.choice([1, 2, 3, 4], p=[0.2, 0.3, 0.35, 0.15]))
+        # Acuity has its own stream so the outcome model can look at it
+        # without perturbing the rest of the course.
+        acuity_rng = np.random.default_rng((int(seed) + _stable_hash("acuity")) & 0xFFFFFFFF)
+        acuity = int(acuity_rng.choice([1, 2, 3, 4], p=[0.2, 0.3, 0.35, 0.15]))
         c = cls(
             hospitalization_id=str(hospitalization_id),
             admit_time=admit_time,
@@ -207,10 +270,17 @@ class HospitalCourse:
             pbw_kg=pbw,
             acuity=acuity,
         )
+        c.expired = bool(expired)
+        c.los_h = float(los_h)
+        c.diabetic, c.copd, c.ckd = traits["diabetic"], traits["copd"], traits["ckd"]
+        c._ckd_factor = traits["ckd_factor"]
         c._build_severity(rng, t, los_h, expired)
         c._build_respiratory(rng)
         c._build_haemodynamics(rng)
         c._build_meds_and_labs(rng)
+        from synthetic_clif.physiology.events import build_events
+
+        build_events(c)
         return c
 
     def _build_severity(self, rng, t, los_h, expired):
@@ -251,7 +321,10 @@ class HospitalCourse:
                         rng.uniform(2, 8), rng.uniform(6, 36), rng.uniform(18, 60)),
             )
         if expired:
-            span = min(rng.uniform(12, 72), los_h)
+            # Separate stream: a terminal decline must not reshuffle the
+            # earlier course the outcome model was judged on.
+            erng = np.random.default_rng((self.rng_seed + _stable_hash("expiry")) & 0xFFFFFFFF)
+            span = min(erng.uniform(12, 72), los_h)
             ramp = np.clip((t - (los_h - span)) / span, 0, 1)
             sev = np.maximum(sev, 1.2 * ramp)
 
@@ -266,6 +339,7 @@ class HospitalCourse:
         self.resp = np.clip(w[1] * sev + _ou(rng, n, 0.05, 0.9), 0, 1.6)
         self.aki = np.clip(_lag(w[2] * sev, 24.0), 0, 1.5)
         infected = rng.random() < 0.55
+        self.infected = bool(infected)
         self.infection = np.clip(_lag(w[3] * sev, 8.0) * (1.0 if infected else 0.25), 0, 1.5)
 
     def _build_respiratory(self, rng):
@@ -456,6 +530,7 @@ class HospitalCourse:
         self.crs = crs
 
         peep_gain = 1 + 0.02 * np.nan_to_num(np.maximum(peep - 5, 0))
+        self.pf_true = pf * peep_gain
         self.pao2 = np.clip(pf * peep_gain * fio2 * np.exp(_ou(rng, n, 0.12, 0.7)), 35, 550)
         self.spo2 = np.clip(severinghaus_spo2(self.pao2), 60, 100)
 
@@ -510,6 +585,8 @@ class HospitalCourse:
         self.vasopressin = vaso
         self.dobutamine = dobu
 
+        self._map_u = map_u
+        self._response = float(response)
         self.map = map_u + response * (60 * ne + 6 * vaso)
         pp = pp0 * (1 - 0.25 * np.clip(self.shock, 0, 1.2)) + _ou(rng, n, 3.0, 0.8)
         pp = np.clip(pp, 15, 110)
@@ -538,13 +615,13 @@ class HospitalCourse:
         self.sedative = str(rng.choice(["propofol", "dexmedetomidine", "midazolam"], p=[0.6, 0.3, 0.1]))
         self.analgesic = str(rng.choice(["fentanyl", "morphine"], p=[0.75, 0.25]))
         male = self.sex == "male"
-        diabetic = rng.random() < 0.25
+        diabetic = self.diabetic
         b = {
             "sodium": rng.normal(139, 2.5),
             "potassium": rng.normal(4.1, 0.35),
             "bicarbonate": rng.normal(24.5, 2.0),
             "anion_gap": rng.normal(12.5, 2.0),
-            "creatinine": math.exp(rng.normal(math.log(0.85 if not male else 1.0), 0.3)),
+            "creatinine": math.exp(rng.normal(math.log(0.85 if not male else 1.0), 0.25)) * self._ckd_factor,
             "bun_ratio": math.exp(rng.normal(math.log(15), 0.3)),
             "glucose_serum": rng.normal(150 if diabetic else 108, 25 if diabetic else 12),
             "calcium_corr": rng.normal(9.3, 0.4),
@@ -557,18 +634,22 @@ class HospitalCourse:
             "alkaline_phosphatase": math.exp(rng.normal(math.log(80), 0.3)),
             "bilirubin_total": math.exp(rng.normal(math.log(0.6), 0.4)),
             "lactate": math.exp(rng.normal(math.log(1.1), 0.25)),
-            "hemoglobin": rng.normal(13.6 if male else 12.3, 1.4),
+            "hemoglobin": rng.normal(12.3 if male else 11.3, 1.7),
             "wbc": math.exp(rng.normal(math.log(7.5), 0.3)),
-            "platelet_count": float(np.clip(rng.normal(240, 60), 60, 500)),
+            "platelet_count": float(np.clip(math.exp(rng.normal(math.log(220), 0.35)), 40, 600)),
             "inr": rng.normal(1.05, 0.08),
             "ptt": rng.normal(30, 3),
             "crp": math.exp(rng.normal(math.log(4), 1.0)),
             "procalcitonin": math.exp(rng.normal(math.log(0.08), 0.8)),
             "troponin_i": math.exp(rng.normal(math.log(0.01), 0.9)),
             "pco2_offset": rng.normal(0, 2.5),
-            "hypercapnic": float(rng.random() < 0.25),
+            "hypercapnic": float(self.copd),
             "scvo2": rng.normal(72, 4),
         }
+        self.marrow_failure = bool(rng.random() < 0.06)
+        if self.marrow_failure:  # e.g. haematologic malignancy
+            b["platelet_count"] = float(rng.uniform(15, 60))
+            b["hemoglobin"] -= 1.5
         self.lab_base = b
         glucose = b["glucose_serum"] + 45 * self.severity
         ins = np.zeros(n, dtype=bool)
@@ -618,6 +699,95 @@ class HospitalCourse:
         hi = min(lo + 1, len(arr) - 1)
         return float(arr[lo] + (d - lo) * (arr[hi] - arr[lo]))
 
+    # ------------------------------------------------------------------
+    # True values shared by the event builder and the lab draws
+    # ------------------------------------------------------------------
+    def _i(self, h: float) -> int:
+        return int(np.clip(h, 0, self.n_hours - 1))
+
+    def _hgb_raw(self, h: float) -> float:
+        """Haemoglobin before transfusion and measurement noise."""
+        i = self._i(h)
+        b = self.lab_base
+        v = (b["hemoglobin"] - 2.2 * min(self.severity[i], 1.0) - 0.15 * min(h / 24.0, 14)
+             + self._d("hemoglobin", h, 0.3, 0.8))
+        if self.bleed is not None:
+            v -= self.bleed[i]
+        return v
+
+    def _plt_raw(self, h: float) -> float:
+        i = self._i(h)
+        b = self.lab_base
+        shock_lag = float(_lag_value(self.shock, i, 24.0))
+        return (b["platelet_count"]
+                * max(1 - 0.75 * min(_lag_value(self.infection, i, 24.0), 1.0) - 0.25 * min(shock_lag, 1.0), 0.08)
+                * math.exp(self._d("plt", h, 0.06)))
+
+    def _inr_raw(self, h: float) -> float:
+        i = self._i(h)
+        shock_lag = float(_lag_value(self.shock, i, 12.0))
+        return self.lab_base["inr"] + 0.9 * max(shock_lag - 0.2, 0) ** 1.5 + self._d("inr", h, 0.04)
+
+    def product_effect(self, h: float, component: str, per_unit: float, tau_h: Optional[float]) -> float:
+        """Lab change from blood products given before hour ``h``."""
+        tot = 0.0
+        for tr in self.transfusions:
+            if tr["component"] != component or tr["h"] + 1.0 > h:
+                continue
+            decay = 1.0 if tau_h is None else math.exp(-(h - tr["h"]) / tau_h)
+            tot += per_unit * tr["units"] * decay
+        return tot
+
+    def crrt_effect(self, i: int) -> float:
+        """Fraction of solute clearance achieved by CRRT at hour i (0..~1)."""
+        eff = getattr(self, "_crrt_eff", None)
+        return 0.0 if eff is None else float(eff[self._i(i)])
+
+    def svo2_true(self, i: int) -> float:
+        i = self._i(i)
+        s = min(self.shock[i], 1.2)
+        cardiogenic = self.shock_type == "cardiogenic"
+        return self.lab_base["scvo2"] - 15 * s - 6 * cardiogenic * s
+
+    def hemodynamics_at(self, ts, rng) -> dict:
+        """Pulmonary-artery catheter readings that agree with MAP and shock type."""
+        h = float(np.clip((pd.Timestamp(ts) - self.admit_time).total_seconds() / 3600.0, 0, self.n_hours - 1))
+        i = int(h)
+        s = min(self.shock[i], 1.4)
+        bsa = math.sqrt(self.height_cm * self.weight_kg / 3600.0)
+        cardiogenic = self.shock_type == "cardiogenic"
+        if cardiogenic:
+            ci = 2.8 - 1.3 * min(s, 1.2) + 0.4 * bool(self.dobutamine[i])
+        elif self.shock_type == "hypovolemic":
+            ci = 2.9 - 0.9 * s
+        else:
+            ci = 3.0 + 1.3 * s
+        ci = max(ci + rng.normal(0, 0.15), 1.0)
+        co = ci * bsa
+        peep = 0.0 if np.isnan(self.peep[i]) else float(self.peep[i])
+        cvp = 7 + 0.3 * max(peep - 5, 0) + 6 * cardiogenic * s + rng.normal(0, 1.5)
+        cvp = float(np.clip(cvp, 1, 25))
+        pcwp = 10 + 12 * cardiogenic * s + 2 * min(self.resp[i], 1.0) + rng.normal(0, 1.5)
+        pcwp = float(np.clip(pcwp, 4, 35))
+        pvr_wood = 1.3 + 1.6 * min(self.resp[i], 1.2) + rng.normal(0, 0.2)
+        mpap = pcwp + max(pvr_wood, 0.5) * co
+        padp = pcwp + 2 + rng.normal(0, 1)
+        pasp = 3 * mpap - 2 * padp
+        mean_ap = float(self.map[i])
+        svr = 80 * (mean_ap - cvp) / co
+        return {
+            "CVP": cvp,
+            "PA Systolic": pasp,
+            "PA Diastolic": padp,
+            "PA Mean": mpap,
+            "PCWP": pcwp,
+            "Cardiac Output": co,
+            "Cardiac Index": co / bsa,
+            "SVR": svr,
+            "PVR": 80 * (mpap - pcwp) / co,
+            "SvO2": float(np.clip(self.svo2_true(i) + rng.normal(0, 1.5), 30, 90)),
+        }
+
     def labs_at(self, ts, categories, rng) -> dict:
         """Measured lab values for a panel drawn at ``ts``.
 
@@ -640,10 +810,13 @@ class HospitalCourse:
         out = {}
         lactate = b["lactate"] * mul("lactate", 0.15) + 7.0 * shock**1.8 + noise(0.1)
         lactate = max(lactate, 0.4)
-        cr = b["creatinine"] * (1 + 2.5 * aki) * mul("creatinine", 0.06) * (1 + noise(0.03))
-        bun = cr * b["bun_ratio"] * (1 + 0.3 * S) * mul("bun", 0.08) * (1 + noise(0.04))
-        k = b["potassium"] + 0.7 * aki + self._d("potassium", h, 0.25) + noise(0.1)
-        hco3 = b["bicarbonate"] - 1.1 * (lactate - 1.0) - 3.0 * aki + self._d("bicarbonate", h, 1.0) + noise(0.6)
+        dial = self.crrt_effect(i)  # CRRT clears solutes the injured kidney cannot
+        cr = b["creatinine"] * (1 + 2.5 * aki) * (1 - 0.55 * dial) * mul("creatinine", 0.06) * (1 + noise(0.03))
+        bun = cr * b["bun_ratio"] * (1 + 0.3 * S) * (1 - 0.2 * dial) * mul("bun", 0.08) * (1 + noise(0.04))
+        k = b["potassium"] + 0.7 * aki + self._d("potassium", h, 0.25)
+        k = k - 0.8 * dial * (k - 4.1) + noise(0.1)
+        hco3 = b["bicarbonate"] - 1.1 * (lactate - 1.0) - 3.0 * aki + self._d("bicarbonate", h, 1.0)
+        hco3 = hco3 + 0.7 * dial * (24.0 - hco3) + noise(0.6)
         hco3 = float(np.clip(hco3, 6, 42))
         na = b["sodium"] + self._d("sodium", h, 1.6) + noise(0.7)
         ag = b["anion_gap"] + 0.9 * (lactate - 1.0) + 2.0 * aki
@@ -654,11 +827,12 @@ class HospitalCourse:
         alb = b["albumin"] - 0.7 * min(S, 1.0) - 0.02 * days + self._d("albumin", h, 0.1) + noise(0.05)
         alb = max(alb, 1.5)
         ca = b["calcium_corr"] - 0.8 * (4.0 - alb) + self._d("calcium", h, 0.2) + noise(0.1)
-        hgb = b["hemoglobin"] - 1.5 * min(S, 1.0) - 0.12 * min(days, 14) + self._d("hemoglobin", h, 0.3, 0.8) + noise(0.15)
-        hgb = max(hgb, 6.5)
+        hgb = self._hgb_raw(h) + self.product_effect(h, "Packed RBCs", 1.0, None) + noise(0.15)
+        hgb = max(hgb, 4.0)
         wbc = b["wbc"] * (1 + 1.4 * inf) * mul("wbc", 0.15) * (1 + noise(0.04))
-        plt = b["platelet_count"] * (1 - 0.55 * min(_lag_value(self.infection, i, 24.0), 1.0)) * mul("plt", 0.06) * (1 + noise(0.04))
-        inr = b["inr"] + 0.9 * max(shock_lag - 0.2, 0) ** 1.5 + self._d("inr", h, 0.04) + noise(0.02)
+        plt = (self._plt_raw(h) + self.product_effect(h, "Platelets", 30.0, 72.0)) * (1 + noise(0.04))
+        inr = self._inr_raw(h) - self.product_effect(h, "Fresh Frozen Plasma", 0.25, 12.0) + noise(0.02)
+        inr = max(inr, 0.85)
         ast = b["ast"] * (1 + 25 * max(shock_lag - 0.6, 0) ** 1.5 + 0.5 * S) * mul("ast", 0.15) * (1 + noise(0.05))
         alt = b["alt"] * (1 + 18 * max(shock_lag - 0.6, 0) ** 1.5 + 0.4 * S) * mul("alt", 0.15) * (1 + noise(0.05))
         pco2 = 40 + 1.2 * (hco3 - 24) + b["pco2_offset"] + 15 * b["hypercapnic"] * min(self.resp[i], 1.0) + noise(1.5)
@@ -673,7 +847,7 @@ class HospitalCourse:
             "glucose_serum": glucose,
             "calcium_total": ca,
             "magnesium": b["magnesium"] + 0.1 * aki + self._d("magnesium", h, 0.12) + noise(0.05),
-            "phosphate": b["phosphate"] + 1.2 * aki + self._d("phosphate", h, 0.4) + noise(0.15),
+            "phosphate": b["phosphate"] + 1.2 * aki * (1 - 0.7 * dial) + self._d("phosphate", h, 0.4) + noise(0.15),
             "albumin": alb,
             "total_protein": b["total_protein"] - 0.9 * min(S, 1.0) + self._d("tp", h, 0.15) + noise(0.1),
             "ast": ast,
@@ -693,7 +867,7 @@ class HospitalCourse:
             "pco2_arterial": pco2,
             "po2_arterial": self.pao2[i] * (1 + noise(0.04)),
             "pco2_venous": pco2 + 6 + noise(1.5),
-            "so2_central_venous": b["scvo2"] - 15 * min(shock, 1.2) + noise(2.0),
+            "so2_central_venous": self.svo2_true(i) + 3 + noise(2.0),
         }
         values["bilirubin_conjugated"] = values["bilirubin_total"] * 0.3 * (1 + noise(0.05))
         values["ph_arterial"] = 6.1 + math.log10(hco3 / (0.0307 * pco2))
@@ -715,8 +889,19 @@ def _lag_value(arr: np.ndarray, i: int, tau_h: float) -> float:
 
 
 @lru_cache(maxsize=4096)
-def _cached_course(hosp_id, admit, discharge, seed, age, sex, expired):
-    return HospitalCourse.build(hosp_id, admit, discharge, seed, age=age, sex=sex, expired=expired)
+def _cached_course(hosp_id, admit, discharge, seed, age, sex, expired, patient_seed):
+    return HospitalCourse.build(hosp_id, admit, discharge, seed, age=age, sex=sex, expired=expired,
+                                patient_seed=patient_seed)
+
+
+def patient_seed_for_row(row) -> Optional[int]:
+    seed = row.get("_patient_seed")
+    if seed is not None and not pd.isna(seed):
+        return int(seed)
+    pid = row.get("patient_id")
+    if pid is not None and not pd.isna(pid):
+        return _stable_hash(f"patient:{pid}")
+    return None
 
 
 def course_for_row(row) -> Optional[HospitalCourse]:
@@ -737,5 +922,6 @@ def course_for_row(row) -> Optional[HospitalCourse]:
     sex = None if sex is None or pd.isna(sex) else str(sex)
     dc = str(row.get("discharge_category") or "").strip().lower()
     return _cached_course(
-        str(hosp_id), pd.Timestamp(admit), pd.Timestamp(discharge), int(seed), age, sex, dc == "expired"
+        str(hosp_id), pd.Timestamp(admit), pd.Timestamp(discharge), int(seed), age, sex, dc == "expired",
+        patient_seed_for_row(row),
     )

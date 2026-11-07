@@ -1,115 +1,100 @@
-"""ECMO/MCS (Mechanical Circulatory Support) generator."""
+"""ECMO/MCS (Mechanical Circulatory Support) generator.
 
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+Support comes from the hospital course: VV ECMO for refractory hypoxaemia,
+VA ECMO for refractory shock, and an Impella or balloon pump for cardiogenic
+shock on inotropes. The configuration stays fixed for the run; flow, sweep
+and pump speed drift slowly and are weaned in the final day before
+decannulation.
+"""
+
+from datetime import timedelta
 
 import numpy as np
 import pandas as pd
 
 from synthetic_clif.generators.base import BaseGenerator
-from synthetic_clif.utils.timestamps import generate_irregular_timestamps
+from synthetic_clif.physiology.course import course_for_row
+
+MCS_GROUP = {
+    "VV_ECMO": "ECMO",
+    "VA_ECMO": "ECMO",
+    "IABP": "IABP",
+    "Impella_CP": "temporary_LVAD",
+    "Impella_5.5": "temporary_LVAD",
+    "CentriMag_LV": "temporary_LVAD",
+}
 
 
 class ECMOMCSGenerator(BaseGenerator):
-    """Generate synthetic ECMO/MCS data.
+    """Generate synthetic ECMO/MCS data from the shared course."""
 
-    Creates ecmo_mcs table for patients on extracorporeal support.
-    """
+    COLUMNS = ["hospitalization_id", "recorded_dttm", "device_name", "device_category", "mcs_group",
+               "sweep_set", "flow", "fdO2_set", "ecmo_configuration_category",
+               "control_parameter_name", "control_parameter_category", "control_parameter_value"]
 
-    def generate(
-        self,
-        hospitalizations_df: pd.DataFrame,
-        ecmo_rate: float = 0.02,
-    ) -> pd.DataFrame:
-        """Generate ECMO/MCS data.
-
-        Args:
-            hospitalizations_df: Hospitalization table DataFrame
-            ecmo_rate: Proportion of hospitalizations with ECMO
-
-        Returns:
-            DataFrame with ecmo_mcs columns
-        """
+    def generate(self, hospitalizations_df: pd.DataFrame, ecmo_rate: float = 0.02) -> pd.DataFrame:
+        """``ecmo_rate`` is kept for compatibility; the course decides who needs support."""
         records = []
-
         for _, hosp in hospitalizations_df.iterrows():
-            hosp_id = hosp["hospitalization_id"]
-            admit_time = hosp["admission_dttm"]
-            discharge_time = hosp["discharge_dttm"]
-
-            if pd.isna(admit_time):
+            course = course_for_row(hosp)
+            if course is None or not course.mcs:
                 continue
-
-            if pd.isna(discharge_time):
-                discharge_time = admit_time + timedelta(days=5)
-
-            if self.rng.random() > ecmo_rate:
-                continue
-
-            hosp_ecmo = self._generate_hospitalization_ecmo(
-                hosp_id, admit_time, discharge_time
-            )
-            records.extend(hosp_ecmo)
-
-        df = pd.DataFrame(records)
-
+            admit = hosp["admission_dttm"]
+            discharge = hosp["discharge_dttm"]
+            if pd.isna(discharge):
+                discharge = admit + timedelta(days=5)
+            for run in course.mcs:
+                records.extend(self._run(hosp["hospitalization_id"], admit, discharge, course, run))
+        df = pd.DataFrame(records, columns=self.COLUMNS)
         if len(df) > 0:
             df["recorded_dttm"] = pd.to_datetime(df["recorded_dttm"], utc=True)
-
         return df
 
-    def _generate_hospitalization_ecmo(
-        self,
-        hospitalization_id: str,
-        admit_time: datetime,
-        discharge_time: datetime,
-    ) -> list[dict]:
-        """Generate ECMO data for one hospitalization."""
-        records = []
-        los_hours = (discharge_time - admit_time).total_seconds() / 3600
+    def _run(self, hosp_id, admit, discharge, course, run) -> list[dict]:
+        device = run["device"]
+        group = MCS_GROUP.get(device, "ECMO")
+        s, e = int(run["start"]), int(run["end"])
+        n = max(e - s, 1)
+        rng = self.rng
+        # time-to-wean: the last 24 h of a run that ends before the stay does
+        weaning = e < course.n_hours - 2
+        wean = np.zeros(n)
+        if weaning:
+            k = min(24, n)
+            wean[n - k:] = np.linspace(0, 1, k)
+        drift = np.cumsum(rng.normal(0, 0.05, n))
+        drift -= drift.mean()
 
-        # Device categories and their MCS groups per CLIFPy schema
-        # Increased ECMO weights to ensure better coverage of sweep/fdO2 fields
-        device_options = [
-            ("VA_ECMO", "ECMO"),
-            ("VV_ECMO", "ECMO"),
-            ("IABP", "IABP"),
-            ("Impella_CP", "temporary_LVAD"),
-            ("Impella_5.5", "temporary_LVAD"),
-            ("CentriMag_LV", "temporary_LVAD"),
-        ]
-        weights = [0.35, 0.35, 0.10, 0.08, 0.07, 0.05]
-        idx = self.rng.choice(len(device_options), p=weights)
-        device, mcs_group = device_options[idx]
+        if device == "VV_ECMO":
+            flow0 = float(np.clip(0.065 * course.weight_kg, 3.5, 6.0))
+            flow = flow0 * (1 + 0.04 * drift)
+            sweep = np.clip(rng.uniform(4, 7) * (1 + 0.1 * drift) * (1 - wean), 0, 10)
+            fdo2 = np.where(wean > 0.8, 0.21, 1.0)
+        elif device == "VA_ECMO":
+            flow0 = float(np.clip(0.06 * course.weight_kg, 3.5, 5.5))
+            flow = flow0 * (1 + 0.04 * drift) * (1 - 0.55 * wean)
+            sweep = np.clip(rng.uniform(2, 4) * (1 + 0.1 * drift), 0.5, 8)
+            fdo2 = np.full(n, float(rng.choice([0.6, 0.8, 1.0])))
+        elif device.startswith("Impella"):
+            p0 = float(rng.integers(6, 9))
+            plevel = np.clip(np.round(p0 - (p0 - 2) * wean), 2, 9)
+            max_flow = 3.7 if device == "Impella_CP" else 5.5
+            flow = np.clip(0.45 + plevel * max_flow / 9 + rng.normal(0, 0.1, n), 0.5, max_flow)
+        elif device == "CentriMag_LV":
+            flow = np.clip(rng.uniform(3.5, 5) * (1 + 0.04 * drift) * (1 - 0.5 * wean), 1.5, 6)
 
-        # ECMO start time
-        start_time = admit_time + timedelta(
-            hours=self.rng.uniform(0, min(48, los_hours * 0.3))
-        )
-
-        # Duration (typically 5-14 days for ECMO)
-        duration_hours = min(
-            self.rng.uniform(72, 336),
-            (discharge_time - start_time).total_seconds() / 3600,
-        )
-        end_time = start_time + timedelta(hours=duration_hours)
-
-        # Hourly recordings
-        timestamps = generate_irregular_timestamps(
-            start_time,
-            end_time,
-            mean_interval_hours=1,
-            cv=0.2,
-            rng=self.rng,
-        )
-
-        for ts in timestamps:
-            record = {
-                "hospitalization_id": hospitalization_id,
+        rows = []
+        for j in range(n):
+            i = s + j
+            ts = admit + timedelta(hours=i + float(rng.uniform(0, 0.25)))
+            if ts >= discharge:
+                break
+            rec = {
+                "hospitalization_id": hosp_id,
                 "recorded_dttm": ts,
                 "device_name": device.lower(),
                 "device_category": device,
-                "mcs_group": mcs_group,
+                "mcs_group": group,
                 "sweep_set": None,
                 "flow": None,
                 "fdO2_set": None,
@@ -118,30 +103,30 @@ class ECMOMCSGenerator(BaseGenerator):
                 "control_parameter_category": None,
                 "control_parameter_value": None,
             }
-
-            if mcs_group == "ECMO":
-                record["flow"] = round(self.rng.uniform(3, 6), 1)
-                record["sweep_set"] = round(self.rng.uniform(2, 8), 1)
-                record["fdO2_set"] = round(self.rng.uniform(0.5, 1.0), 2)
-                record["ecmo_configuration_category"] = self.rng.choice(["VV", "VA"])
-                record["control_parameter_name"] = "RPM"
-                record["control_parameter_category"] = "rpm"
-                record["control_parameter_value"] = round(self.rng.uniform(2500, 4000), 0)
-            elif "Impella" in device:
-                record["flow"] = round(self.rng.uniform(2, 5), 1)
-                record["control_parameter_name"] = "P-Level"
-                record["control_parameter_category"] = "p-level"
-                record["control_parameter_value"] = round(self.rng.uniform(30000, 50000), 0)
-            elif "CentriMag" in device:
-                record["flow"] = round(self.rng.uniform(2, 5), 1)
-                record["control_parameter_name"] = "Speed"
-                record["control_parameter_category"] = "speed"
-                record["control_parameter_value"] = round(self.rng.uniform(30000, 50000), 0)
+            if group == "ECMO":
+                f = float(flow[j] + rng.normal(0, 0.05))
+                rec["flow"] = round(f, 2)
+                rec["sweep_set"] = round(float(sweep[j]) * 2) / 2
+                rec["fdO2_set"] = round(float(fdo2[j]), 2)
+                rec["ecmo_configuration_category"] = device[:2]
+                rec["control_parameter_name"] = "RPM"
+                rec["control_parameter_category"] = "rpm"
+                rec["control_parameter_value"] = float(round(650 * f + 600 + rng.normal(0, 40), -1))
+            elif device.startswith("Impella"):
+                rec["flow"] = round(float(flow[j]), 1)
+                rec["control_parameter_name"] = "P-Level"
+                rec["control_parameter_category"] = "p-level"
+                rec["control_parameter_value"] = float(plevel[j])
+            elif device == "CentriMag_LV":
+                f = float(flow[j])
+                rec["flow"] = round(f, 1)
+                rec["control_parameter_name"] = "Speed"
+                rec["control_parameter_category"] = "speed"
+                rec["control_parameter_value"] = float(round(700 * f + 800, -1))
             elif device == "IABP":
-                record["flow"] = round(self.rng.uniform(0.5, 1.5), 1)
-                record["control_parameter_name"] = "Ratio"
-                record["control_parameter_category"] = "ratio"
-
-            records.append(record)
-
-        return records
+                ratio = 1.0 if wean[j] < 0.4 else 2.0 if wean[j] < 0.8 else 3.0
+                rec["control_parameter_name"] = "Ratio"
+                rec["control_parameter_category"] = "ratio"
+                rec["control_parameter_value"] = ratio
+            rows.append(rec)
+        return rows

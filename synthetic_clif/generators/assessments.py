@@ -8,6 +8,7 @@ import pandas as pd
 
 from synthetic_clif.generators.base import BaseGenerator
 from synthetic_clif.config.mcide import MCIDELoader
+from synthetic_clif.physiology.course import course_for_row
 from synthetic_clif.utils.timestamps import generate_irregular_timestamps
 
 
@@ -22,17 +23,17 @@ class PatientAssessmentsGenerator(BaseGenerator):
     - Other ICU assessments
     """
 
-    # Map assessment categories to assessment groups
+    # Assessment groups as clifpy's 2.1 schema maps the categories
     ASSESSMENT_GROUPS = {
-        "gcs_total": "gcs",
-        "gcs_eye": "gcs",
-        "gcs_verbal": "gcs",
-        "gcs_motor": "gcs",
-        "RASS": "sedation",
-        "cam_total": "delirium",
-        "NRS": "pain",
-        "braden_total": "skin",
-        "Morse Fall Scale": "fall_risk",
+        "gcs_total": "Neurological",
+        "gcs_eye": "Neurological",
+        "gcs_verbal": "Neurological",
+        "gcs_motor": "Neurological",
+        "RASS": "Sedation/Agitation",
+        "cam_total": "Delirium",
+        "NRS": "Pain",
+        "braden_total": "Nursing Risk",
+        "Morse Fall Scale": "Nursing Risk",
     }
 
     # Assessment parameters
@@ -100,9 +101,6 @@ class PatientAssessmentsGenerator(BaseGenerator):
         """
         records = []
 
-        # Build ventilation status lookup
-        vent_lookup = self._build_ventilation_lookup(respiratory_df)
-
         for _, hosp in hospitalizations_df.iterrows():
             hosp_id = hosp["hospitalization_id"]
             admit_time = hosp["admission_dttm"]
@@ -114,11 +112,11 @@ class PatientAssessmentsGenerator(BaseGenerator):
             if pd.isna(discharge_time):
                 discharge_time = admit_time + timedelta(days=5)
 
-            is_ventilated = vent_lookup.get(hosp_id, False)
-            hosp_assessments = self._generate_hospitalization_assessments(
-                hosp_id, admit_time, discharge_time, is_ventilated
-            )
-            records.extend(hosp_assessments)
+            course = course_for_row(hosp)
+            records.extend(self._course_assessments(
+                hosp_id, admit_time, discharge_time, course,
+                str(hosp.get("admission_type_category") or ""),
+            ))
 
         df = pd.DataFrame(records)
 
@@ -130,300 +128,73 @@ class PatientAssessmentsGenerator(BaseGenerator):
 
         return df
 
-    def _build_ventilation_lookup(
-        self, respiratory_df: Optional[pd.DataFrame]
-    ) -> dict[str, bool]:
-        """Build lookup for ventilation status."""
-        if respiratory_df is None or len(respiratory_df) == 0:
-            return {}
+    def _rec(self, hosp_id, ts, cat, value, text=None) -> dict:
+        return {
+            "hospitalization_id": hosp_id,
+            "recorded_dttm": ts,
+            "assessment_category": cat,
+            "assessment_name": self.name_from_category(cat),
+            "assessment_group": self.ASSESSMENT_GROUPS.get(cat, "Neurological"),
+            "numerical_value": None if value is None else float(value),
+            "categorical_value": text,
+        }
 
-        lookup = {}
-        for hosp_id in respiratory_df["hospitalization_id"].unique():
-            hosp_resp = respiratory_df[
-                respiratory_df["hospitalization_id"] == hosp_id
-            ]
-            is_vent = (hosp_resp["device_category"] == "IMV").any()
-            lookup[hosp_id] = is_vent
+    def _course_assessments(self, hosp_id, admit_time, discharge_time, course, admission_type) -> list[dict]:
+        """Scores observed from the course's sedation, delirium and illness.
 
-        return lookup
+        RASS and GCS follow sedation depth (which also sets sedative doses),
+        CAM-ICU is unassessable when RASS is -4 or lower and positive during
+        delirium, pain is scored only in patients who can self-report, and
+        Braden and Morse risk rise with immobility, age and delirium.
+        """
+        rec = []
+        n = course.n_hours
+        sedated = (course.level == 4) & (course.trach == 0)
 
-    def _generate_hospitalization_assessments(
-        self,
-        hospitalization_id: str,
-        admit_time: datetime,
-        discharge_time: datetime,
-        is_ventilated: bool,
-    ) -> list[dict]:
-        """Generate all assessments for one hospitalization."""
-        records = []
+        def jitter(v, lo, hi, p=0.12):
+            if self.rng.random() < p:
+                v += self.rng.choice([-1, 1])
+            return int(np.clip(v, lo, hi))
 
-        # Determine patient's baseline status
-        is_sedated = is_ventilated and self.rng.random() < 0.8
+        # Neuro checks: GCS q4h, RASS q2h while sedated on the ventilator
+        for ts in generate_irregular_timestamps(admit_time, discharge_time, mean_interval_hours=2,
+                                                cv=0.25, rng=self.rng):
+            h = course.hour_index(ts)
+            rass = jitter(course.rass[h], -5, 4, 0.1)
+            if sedated[h] or self.rng.random() < 0.5:
+                rec.append(self._rec(hosp_id, ts, "RASS", rass))
+            if self.rng.random() < 0.5:
+                e = jitter(course.gcs_eye[h], 1, 4, 0.08)
+                v = int(course.gcs_verbal[h]) if course.level[h] == 4 else jitter(course.gcs_verbal[h], 1, 5, 0.08)
+                m = jitter(course.gcs_motor[h], 1, 6, 0.08)
+                for cat, val in (("gcs_total", e + v + m), ("gcs_eye", e), ("gcs_verbal", v), ("gcs_motor", m)):
+                    rec.append(self._rec(hosp_id, ts, cat, val))
+            # Self-reported pain only when awake and not intubated
+            if course.level[h] < 4 and rass >= -1 and self.rng.random() < 0.5:
+                pain = (1.5 + 3.0 * (admission_type == "elective") * (h < 72)
+                        + 1.5 * min(course.severity[h], 1.0) + self.rng.normal(0, 1.8))
+                rec.append(self._rec(hosp_id, ts, "NRS", int(np.clip(round(pain), 0, 10))))
 
-        # GCS assessments
-        records.extend(
-            self._generate_gcs_assessments(
-                hospitalization_id, admit_time, discharge_time, is_sedated
-            )
-        )
-
-        # RASS for ICU patients
-        if self.rng.random() < 0.7:
-            records.extend(
-                self._generate_rass_assessments(
-                    hospitalization_id, admit_time, discharge_time, is_sedated
-                )
-            )
-
-        # CAM-ICU
-        if self.rng.random() < 0.6:
-            records.extend(
-                self._generate_camicu_assessments(
-                    hospitalization_id, admit_time, discharge_time, is_sedated
-                )
-            )
-
-        # Pain scores
-        records.extend(
-            self._generate_pain_assessments(
-                hospitalization_id, admit_time, discharge_time, is_sedated
-            )
-        )
-
-        # Nursing assessments (Braden, Morse) - less frequent
-        if self.rng.random() < 0.8:
-            records.extend(
-                self._generate_nursing_assessments(
-                    hospitalization_id, admit_time, discharge_time
-                )
-            )
-
-        return records
-
-    def _generate_gcs_assessments(
-        self,
-        hospitalization_id: str,
-        admit_time: datetime,
-        discharge_time: datetime,
-        is_sedated: bool,
-    ) -> list[dict]:
-        """Generate GCS assessments."""
-        records = []
-
-        timestamps = generate_irregular_timestamps(
-            admit_time,
-            discharge_time,
-            mean_interval_hours=4,
-            cv=0.3,
-            rng=self.rng,
-        )
-
-        for ts in timestamps:
-            if is_sedated:
-                # Sedated patients have lower GCS
-                gcs_eye = self.rng.integers(1, 3)
-                gcs_verbal = 1  # Usually intubated
-                gcs_motor = self.rng.integers(1, 5)
+        # CAM-ICU twice a day
+        for ts in generate_irregular_timestamps(admit_time, discharge_time, mean_interval_hours=12,
+                                                cv=0.3, rng=self.rng):
+            h = course.hour_index(ts)
+            if course.rass[h] <= -4:
+                rec.append(self._rec(hosp_id, ts, "cam_total", None, "Unable to Assess"))
+            elif course.delirium[h]:
+                rec.append(self._rec(hosp_id, ts, "cam_total", 1, "Positive"))
             else:
-                # Non-sedated
-                gcs_eye = self.rng.choice([3, 4], p=[0.2, 0.8])
-                gcs_verbal = self.rng.choice([4, 5], p=[0.3, 0.7])
-                gcs_motor = self.rng.choice([5, 6], p=[0.2, 0.8])
+                rec.append(self._rec(hosp_id, ts, "cam_total", 0, "Negative"))
 
-            gcs_total = gcs_eye + gcs_verbal + gcs_motor
-
-            # Add component scores
-            for cat, val in [("gcs_total", gcs_total), ("gcs_eye", gcs_eye),
-                             ("gcs_verbal", gcs_verbal), ("gcs_motor", gcs_motor)]:
-                records.append(
-                    {
-                        "hospitalization_id": hospitalization_id,
-                        "recorded_dttm": ts,
-                        "assessment_category": cat,
-                        "assessment_name": self.name_from_category(cat),
-                        "assessment_group": self.ASSESSMENT_GROUPS.get(cat, "other"),
-                        "numerical_value": float(val),
-                        "categorical_value": None,
-                    }
-                )
-
-        return records
-
-    def _generate_rass_assessments(
-        self,
-        hospitalization_id: str,
-        admit_time: datetime,
-        discharge_time: datetime,
-        is_sedated: bool,
-    ) -> list[dict]:
-        """Generate RASS (Richmond Agitation-Sedation Scale) assessments."""
-        records = []
-
-        timestamps = generate_irregular_timestamps(
-            admit_time,
-            discharge_time,
-            mean_interval_hours=4,
-            cv=0.3,
-            rng=self.rng,
-        )
-
-        for ts in timestamps:
-            if is_sedated:
-                # Target RASS -2 to -3 for sedation
-                rass = self.rng.choice([-4, -3, -2, -1, 0], p=[0.1, 0.35, 0.35, 0.15, 0.05])
-            else:
-                # Alert patients mostly 0, some agitated
-                rass = self.rng.choice([-1, 0, 1, 2], p=[0.1, 0.75, 0.10, 0.05])
-
-            records.append(
-                {
-                    "hospitalization_id": hospitalization_id,
-                    "recorded_dttm": ts,
-                    "assessment_category": "RASS",
-                    "assessment_name": self.name_from_category("RASS"),
-                    "assessment_group": self.ASSESSMENT_GROUPS.get("RASS", "other"),
-                    "numerical_value": float(rass),
-                    "categorical_value": None,
-                }
-            )
-
-        return records
-
-    def _generate_camicu_assessments(
-        self,
-        hospitalization_id: str,
-        admit_time: datetime,
-        discharge_time: datetime,
-        is_sedated: bool,
-    ) -> list[dict]:
-        """Generate CAM-ICU (delirium) assessments."""
-        records = []
-
-        timestamps = generate_irregular_timestamps(
-            admit_time,
-            discharge_time,
-            mean_interval_hours=12,
-            cv=0.3,
-            rng=self.rng,
-        )
-
-        # Delirium incidence ~30% in ICU
-        has_delirium = self.rng.random() < 0.30
-
-        for ts in timestamps:
-            if is_sedated:
-                # Cannot assess if deeply sedated
-                result_text = "Unable to Assess"
-                result_value = None
-            elif has_delirium and self.rng.random() < 0.7:
-                result_text = "Positive"
-                result_value = 1.0
-            else:
-                result_text = "Negative"
-                result_value = 0.0
-
-            records.append(
-                {
-                    "hospitalization_id": hospitalization_id,
-                    "recorded_dttm": ts,
-                    "assessment_category": "cam_total",
-                    "assessment_name": self.name_from_category("cam_total"),
-                    "assessment_group": self.ASSESSMENT_GROUPS.get("cam_total", "other"),
-                    "numerical_value": result_value,
-                    "categorical_value": result_text,
-                }
-            )
-
-        return records
-
-    def _generate_pain_assessments(
-        self,
-        hospitalization_id: str,
-        admit_time: datetime,
-        discharge_time: datetime,
-        is_sedated: bool,
-    ) -> list[dict]:
-        """Generate pain score assessments."""
-        records = []
-
-        timestamps = generate_irregular_timestamps(
-            admit_time,
-            discharge_time,
-            mean_interval_hours=4,
-            cv=0.3,
-            rng=self.rng,
-        )
-
-        for ts in timestamps:
-            if is_sedated:
-                # Use behavioral pain scale range for sedated
-                pain = self.rng.integers(0, 4)
-            else:
-                # Standard 0-10 scale, most patients 0-4
-                pain = self.rng.choice(
-                    [0, 1, 2, 3, 4, 5, 6, 7, 8],
-                    p=[0.25, 0.15, 0.15, 0.15, 0.10, 0.08, 0.06, 0.04, 0.02],
-                )
-
-            records.append(
-                {
-                    "hospitalization_id": hospitalization_id,
-                    "recorded_dttm": ts,
-                    "assessment_category": "NRS",
-                    "assessment_name": self.name_from_category("NRS"),
-                    "assessment_group": self.ASSESSMENT_GROUPS.get("NRS", "other"),
-                    "numerical_value": float(pain),
-                    "categorical_value": None,
-                }
-            )
-
-        return records
-
-    def _generate_nursing_assessments(
-        self,
-        hospitalization_id: str,
-        admit_time: datetime,
-        discharge_time: datetime,
-    ) -> list[dict]:
-        """Generate nursing assessments (Braden, Morse)."""
-        records = []
-
-        # Daily assessments
-        timestamps = generate_irregular_timestamps(
-            admit_time,
-            discharge_time,
-            mean_interval_hours=24,
-            cv=0.2,
-            rng=self.rng,
-        )
-
-        for ts in timestamps:
-            # Braden score (6-23, higher = lower risk)
-            braden = self.rng.integers(12, 22)
-            records.append(
-                {
-                    "hospitalization_id": hospitalization_id,
-                    "recorded_dttm": ts,
-                    "assessment_category": "braden_total",
-                    "assessment_name": self.name_from_category("braden_total"),
-                    "assessment_group": self.ASSESSMENT_GROUPS.get("braden_total", "other"),
-                    "numerical_value": float(braden),
-                    "categorical_value": None,
-                }
-            )
-
-            # Morse fall risk (0-125)
-            morse = self.rng.integers(15, 75)
-            records.append(
-                {
-                    "hospitalization_id": hospitalization_id,
-                    "recorded_dttm": ts,
-                    "assessment_category": "Morse Fall Scale",
-                    "assessment_name": self.name_from_category("Morse Fall Scale"),
-                    "assessment_group": self.ASSESSMENT_GROUPS.get("Morse Fall Scale", "other"),
-                    "numerical_value": float(morse),
-                    "categorical_value": None,
-                }
-            )
-
-        return records
+        # Daily nursing risk scores
+        for ts in generate_irregular_timestamps(admit_time, discharge_time, mean_interval_hours=24,
+                                                cv=0.2, rng=self.rng):
+            h = course.hour_index(ts)
+            immobile = course.level[h] == 4 or course.rass[h] <= -2
+            braden = (20 - 6 * immobile - 2 * min(course.severity[h], 1.0) - 1.5 * (course.age >= 75)
+                      - 1.5 * course.delirium[h] + self.rng.normal(0, 1))
+            rec.append(self._rec(hosp_id, ts, "braden_total", int(np.clip(round(braden), 6, 23))))
+            morse = (15 + 20 * (course.age >= 70) + 20 * course.delirium[h] + 20 * bool(course.central_line[h] or course.art_line[h])
+                     + 15 * (course.severity[h] > 0.5) + self.rng.normal(0, 8))
+            rec.append(self._rec(hosp_id, ts, "Morse Fall Scale", int(np.clip(5 * round(morse / 5), 0, 125))))
+        return rec
