@@ -36,6 +36,7 @@ def sequential_dataset():
         seed=SEED,
         include_concept_tables=True,
         workers=1,
+        clif_version="2.1",  # compared against the 2.1 parallel run
     )
     return dataset.generate(verbose=False)
 
@@ -242,3 +243,18 @@ class TestSequentialModeUnchanged:
             seed=SEED,
         )
         assert dataset.workers == 1
+
+
+class TestParallelClif3:
+    """Parallel generation also yields valid CLIF 3.0.0 output (the default)."""
+
+    def test_parallel_3_0_matches_sequential_and_validates(self):
+        from synthetic_clif.clif3.validate import validate_tables
+
+        kwargs = dict(n_patients=N_PATIENTS, n_hospitalizations=N_HOSPITALIZATIONS,
+                      seed=SEED, include_concept_tables=True)
+        par = SyntheticCLIFDataset(workers=WORKERS, **kwargs).generate(verbose=False)
+        seq = SyntheticCLIFDataset(workers=1, **kwargs).generate(verbose=False)
+        assert set(par) == set(seq)
+        errors = {t: e for t, e in validate_tables(par).items() if e}
+        assert not errors, errors
