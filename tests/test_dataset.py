@@ -42,6 +42,7 @@ class TestSyntheticCLIFDataset:
             n_hospitalizations=8,
             seed=42,
             include_concept_tables=True,
+            clif_version="2.1",  # checks the 2.1 concept table names
         )
         tables = dataset.generate()
 

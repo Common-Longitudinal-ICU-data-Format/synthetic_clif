@@ -22,6 +22,7 @@ def parallel_dataset():
         seed=SEED,
         include_concept_tables=True,
         workers=WORKERS,
+        clif_version="2.1",  # table lists below are CLIF 2.1 names
     )
     return dataset.generate(verbose=False)
 

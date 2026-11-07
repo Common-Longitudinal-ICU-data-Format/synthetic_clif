@@ -1,9 +1,9 @@
 """Tests for CLIF 3.0.0 output (``clif_version="3.0"``).
 
-The 3.0 tables are built by converting the 2.1 tables the generators emit
-(``synthetic_clif.clif3``), so these tests check three things: the vocabulary
-mapping, conformance with the vendored 3.0 schema, and that the 2.1 default
-is unchanged.
+3.0.0 is the default output. The 3.0 tables are built by converting the 2.1
+tables the generators emit (``synthetic_clif.clif3``), so these tests check
+three things: the vocabulary mapping, conformance with the vendored 3.0 schema,
+and that 2.1 output is still available and unchanged.
 """
 
 import subprocess
@@ -174,12 +174,18 @@ class TestDerivedTables:
 
 
 # --------------------------------------------------------------------------
-# 2.1 default unchanged
+# 3.0 default, 2.1 still available
 # --------------------------------------------------------------------------
-class TestV21Default:
-    def test_default_is_2_1(self):
+class TestVersionSelection:
+    def test_default_is_3_0(self):
         ds = SyntheticCLIFDataset(n_patients=3, n_hospitalizations=4, seed=7)
-        assert ds.clif_version == "2.1"
+        assert ds.clif_version == "3.0"
+        tables = ds.generate(verbose=False)
+        assert "input" in tables
+        assert not set(tables) & V21_ONLY_TABLES
+
+    def test_2_1_still_available(self):
+        ds = SyntheticCLIFDataset(n_patients=3, n_hospitalizations=4, seed=7, clif_version="2.1")
         tables = ds.generate(verbose=False)
         assert "intake_output" in tables
         assert "input" not in tables and "airway" not in tables
@@ -193,7 +199,7 @@ class TestV21Default:
         )
 
     def test_2_1_matches_unconverted(self, v3_dataset):
-        ds = SyntheticCLIFDataset(n_patients=40, n_hospitalizations=50, seed=7)
+        ds = SyntheticCLIFDataset(n_patients=40, n_hospitalizations=50, seed=7, clif_version="2.1")
         v21 = ds.generate(verbose=False)
         assert set(v21) == set(v3_dataset._tables_v21)
         pd.testing.assert_frame_equal(v21["vitals"], v3_dataset._tables_v21["vitals"])
@@ -202,15 +208,19 @@ class TestV21Default:
 # --------------------------------------------------------------------------
 # CLI and clifpy
 # --------------------------------------------------------------------------
-def test_cli_clif_version_3(tmp_path):
-    out = tmp_path / "v3"
+@pytest.mark.parametrize(
+    "flag, present, absent",
+    [([], "input", "intake_output"), (["--clif-version", "2.1"], "intake_output", "input")],
+)
+def test_cli_clif_version(tmp_path, flag, present, absent):
+    out = tmp_path / "out"
     subprocess.run(
         [sys.executable, "-m", "synthetic_clif", "--patients", "3", "--hospitalizations", "4",
-         "--output", str(out), "--clif-version", "3.0"],
+         "--output", str(out), *flag],
         check=True, capture_output=True,
     )
-    assert (out / "clif_input.parquet").exists()
-    assert not (out / "clif_intake_output.parquet").exists()
+    assert (out / f"clif_{present}.parquet").exists()
+    assert not (out / f"clif_{absent}.parquet").exists()
 
 
 def test_clifpy_3_0_no_structural_errors(v3_dataset):

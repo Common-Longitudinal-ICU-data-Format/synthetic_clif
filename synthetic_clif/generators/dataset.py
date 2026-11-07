@@ -82,7 +82,7 @@ class SyntheticCLIFDataset:
         mcide_dir: Optional[Path] = None,
         include_concept_tables: bool = True,
         workers: int = 1,
-        clif_version: str = "2.1",
+        clif_version: str = "3.0",
     ):
         """Initialize the synthetic dataset generator.
 
@@ -93,8 +93,8 @@ class SyntheticCLIFDataset:
             mcide_dir: Optional path to mCIDE CSV directory
             include_concept_tables: Whether to generate concept tables (draft status)
             workers: Number of parallel workers (1 = sequential, >1 = parallel big-3)
-            clif_version: CLIF version of the output tables, "2.1" (default) or
-                "3.0". 3.0 output is produced by converting the 2.1 simulation
+            clif_version: CLIF version of the output tables, "3.0" (default) or
+                "2.1". 3.0 output is produced by converting the 2.1 simulation
                 (see ``synthetic_clif.clif3``).
         """
         self.n_patients = n_patients

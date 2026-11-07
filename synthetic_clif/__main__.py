@@ -30,8 +30,8 @@ Examples:
   # Output as CSV instead of parquet
   python -m synthetic_clif --output data/ --format csv
 
-  # Generate CLIF 3.0.0 tables instead of 2.1
-  python -m synthetic_clif --hospitalizations 100 --output data/v3/ --clif-version 3.0
+  # Generate CLIF 2.1.0 tables instead of 3.0.0
+  python -m synthetic_clif --hospitalizations 100 --output data/v21/ --clif-version 2.1
 
   # Generate with 4 parallel workers (speeds up large datasets)
   python -m synthetic_clif --hospitalizations 10000 --output data/ -w 4
@@ -98,8 +98,8 @@ Examples:
     )
     parser.add_argument(
         "--clif-version",
-        default="2.1",
-        help="CLIF version of the output: 2.1 (default) or 3.0",
+        default="3.0",
+        help="CLIF version of the output: 3.0 (default) or 2.1",
     )
     parser.add_argument(
         "--verbose",

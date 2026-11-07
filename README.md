@@ -1,10 +1,10 @@
 # synthetic_clif
 
-Generate synthetic [CLIF (Common Longitudinal ICU Format)](https://clif-consortium.github.io/website/) 2.1.0 and 3.0.0 datasets for testing and development. Output is CLIF 2.1.0 by default; pass `--clif-version 3.0` for CLIF 3.0.0 (see [CLIF 3.0.0 output](#clif-300-output)).
+Generate synthetic [CLIF (Common Longitudinal ICU Format)](https://clif-consortium.github.io/website/) 3.0.0 and 2.1.0 datasets for testing and development. Output is CLIF 3.0.0 by default; pass `--clif-version 2.1` for CLIF 2.1.0 (see [CLIF 3.0.0 output](#clif-300-output)).
 
 ## Quick Start: Download the Pre-generated Dataset
 
-A pre-generated dataset with **10,000 hospitalizations** (~33 million rows across 28 tables) is available as a GitHub Release asset.
+A pre-generated dataset with **10,000 hospitalizations** (~33 million rows across 28 tables) is available as a GitHub Release asset. The v0.6.0 release holds CLIF 2.1.0 tables; releases built after CLIF 3.0.0 became the default hold 3.0.0 tables.
 
 ```bash
 # Download and extract (requires GitHub CLI)
@@ -29,7 +29,7 @@ All files use the `clif_` prefix (e.g., `clif_vitals.parquet`, `clif_labs.parque
 
 ## Purpose
 
-This package creates realistic synthetic ICU data that follows the CLIF 2.1.0 specification. Because the data is entirely synthetic, it contains **no Protected Health Information (PHI)**, enabling:
+This package creates realistic synthetic ICU data that follows the CLIF 3.0.0 specification (or 2.1.0 on request). Because the data is entirely synthetic, it contains **no Protected Health Information (PHI)**, enabling:
 
 - **Development on non-HIPAA compliant systems** - Use cloud IDEs, AI coding assistants (like Claude), and other tools that cannot access real patient data
 - **Testing analysis pipelines** - Validate your CLIF analysis code before running on real data
@@ -69,7 +69,7 @@ Options:
   --format [parquet|csv]  Output format (default: parquet)
   --workers INT, -w INT   Number of parallel workers (default: 1)
   --no-concept-tables     Skip generating concept tables (draft status)
-  --clif-version VERSION  CLIF version of the output: 2.1 (default) or 3.0
+  --clif-version VERSION  CLIF version of the output: 3.0 (default) or 2.1
 ```
 
 ### Python API
@@ -84,7 +84,7 @@ dataset = SyntheticCLIFDataset(
     seed=42,
     include_concept_tables=True,
     workers=4,  # parallel generation (default: 1)
-    clif_version="2.1",  # or "3.0" for CLIF 3.0.0 tables
+    clif_version="3.0",  # default; "2.1" for CLIF 2.1.0 tables
 )
 
 tables = dataset.generate()
@@ -99,7 +99,7 @@ dataset.to_parquet(Path("output/"))
 
 ## Generated Tables
 
-The package generates all 28 CLIF 2.1.0 tables:
+With `--clif-version 2.1`, the package generates all 28 CLIF 2.1.0 tables (the default 3.0.0 output is described under [CLIF 3.0.0 output](#clif-300-output)):
 
 ### Beta Tables (16)
 | Table | Description |
@@ -139,8 +139,8 @@ The package generates all 28 CLIF 2.1.0 tables:
 
 ## CLIF 3.0.0 Output
 
-`--clif-version 3.0` (or `clif_version="3.0"`) writes CLIF 3.0.0 tables. The
-generators still simulate in 2.1 terms; `synthetic_clif/clif3/` then converts
+CLIF 3.0.0 is the default output (`--clif-version 2.1` or `clif_version="2.1"`
+gives 2.1.0 instead). The generators still simulate in 2.1 terms; `synthetic_clif/clif3/` then converts
 the tables to 3.0.0 with the same seed, so patient and hospitalization IDs match
 a 2.1 run.
 

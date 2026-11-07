@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This repository generates synthetic CLIF (Common Longitudinal ICU data Format) datasets for testing code without using protected health information (PHI). The synthetic data follows the CLIF 2.1.0 specification by default, and CLIF 3.0.0 with `--clif-version 3.0`, with realistic properties including missingness, outliers, and irregular measurement frequencies.
+This repository generates synthetic CLIF (Common Longitudinal ICU data Format) datasets for testing code without using protected health information (PHI). The synthetic data follows the CLIF 3.0.0 specification by default, and CLIF 2.1.0 with `--clif-version 2.1`, with realistic properties including missingness, outliers, and irregular measurement frequencies.
 
 ## Build and Run Commands
 
@@ -27,8 +27,8 @@ python -m synthetic_clif --patients 10 --hospitalizations 12 --output data/test/
 # Generate full dataset (10,000 hospitalizations)
 python -m synthetic_clif --hospitalizations 10000 --output data/full/ -w 4
 
-# Generate CLIF 3.0.0 tables
-python -m synthetic_clif --hospitalizations 100 --output data/v3/ --clif-version 3.0
+# Generate CLIF 2.1.0 tables (3.0.0 is the default)
+python -m synthetic_clif --hospitalizations 100 --output data/v21/ --clif-version 2.1
 ```
 
 ## Architecture
@@ -71,7 +71,7 @@ python -m synthetic_clif --hospitalizations 100 --output data/v3/ --clif-version
 - Hospital length of stay follows log-normal distribution fitted to real ICU data
 - Patient IDs use UUID format; hospitalization IDs include patient prefix for traceability
 
-## CLIF 2.1.0 Schema Reference
+## CLIF 2.1.0 Schema Reference (internal simulation; 3.0.0 output comes from `synthetic_clif/clif3/`)
 
 The CLIF format includes 16 beta tables (production-ready) and 12 concept tables (draft):
 
