@@ -1,0 +1,6215 @@
+{
+ "clif_version": "3.0.0",
+ "source": "CLIF 3.0 DDL/mCIDE (Common-Longitudinal-ICU-data-Format/CLIF@09ca45c, branch 3.0) via clifpy@1abce93 3.0 schemas (Apache-2.0)",
+ "tables": {
+  "adt": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "hospital_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "hospital_type",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "academic",
+      "community",
+      "ltach"
+     ]
+    },
+    {
+     "name": "in_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "out_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "location_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "location_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "ed",
+      "ward",
+      "stepdown",
+      "icu",
+      "procedural",
+      "l_and_d",
+      "hospice",
+      "psych",
+      "rehab",
+      "radiology",
+      "dialysis",
+      "other"
+     ]
+    },
+    {
+     "name": "location_type",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "general_icu",
+      "cardiac_icu",
+      "cardiothoracic_surgical_icu",
+      "mixed_cardiothoracic_icu",
+      "surgical_icu",
+      "burn_icu",
+      "neuro_icu",
+      "neurosurgical_icu",
+      "mixed_neuro_icu",
+      "medical_icu"
+     ]
+    },
+    {
+     "name": "room_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "bed_id",
+     "data_type": "VARCHAR",
+     "required": false
+    }
+   ]
+  },
+  "airway": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "airway_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "placed_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "removed_dttm",
+     "data_type": "DATETIME",
+     "required": false
+    },
+    {
+     "name": "airway_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "ett",
+      "npa",
+      "opa",
+      "trach"
+     ]
+    },
+    {
+     "name": "airway_size",
+     "data_type": "DOUBLE",
+     "required": false
+    },
+    {
+     "name": "is_cuffed",
+     "data_type": "INT",
+     "required": false,
+     "permissible_values": [
+      0,
+      1
+     ]
+    }
+   ]
+  },
+  "clinical_notes_facts": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "author_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "note_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "note_type",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "note_type_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "h_and_p_note",
+      "progress_note",
+      "consult_note",
+      "procedure_note",
+      "discharge_summary",
+      "transfer_note",
+      "therapy_note",
+      "nutrition_note",
+      "pharmacy_note",
+      "nursing_note",
+      "case_management_note",
+      "death_pronouncement",
+      "patient_instructions"
+     ]
+    },
+    {
+     "name": "note_status",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "signed",
+      "addendum",
+      "incomplete",
+      "co-signed"
+     ]
+    },
+    {
+     "name": "cosigner_id",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "cosigner_specialty",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "note_author_specialty",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "revision_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "creation_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "revision_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "service_date",
+     "data_type": "DATE",
+     "required": true
+    }
+   ]
+  },
+  "clinical_trial": {
+   "columns": [
+    {
+     "name": "participant_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "patient_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "trial_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "trial_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "arm_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "consent_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "enrollment_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "randomized_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "withdrawal_dttm",
+     "data_type": "DATETIME",
+     "required": false
+    }
+   ]
+  },
+  "code_status": {
+   "columns": [
+    {
+     "name": "patient_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "start_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "code_status_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "code_status_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "dnr",
+      "dnar",
+      "udnr",
+      "dnr_or_dni",
+      "dnar_or_dni",
+      "dni_only",
+      "and",
+      "full",
+      "presume_full",
+      "other"
+     ]
+    }
+   ]
+  },
+  "consult_orders": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "order_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "order_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "order_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "pt",
+      "ot",
+      "speech",
+      "swallowing",
+      "nutrition",
+      "respiratory",
+      "social_work",
+      "skin_care",
+      "ostomy_care",
+      "pain_services",
+      "addiction_sud",
+      "psychiatry",
+      "pastoral_services",
+      "palliative_care",
+      "interpreter"
+     ]
+    },
+    {
+     "name": "order_status_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "order_status_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "sent",
+      "completed",
+      "resulted",
+      "canceled"
+     ]
+    }
+   ]
+  },
+  "crrt_therapy": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "device_id",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "recorded_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "crrt_mode_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "crrt_mode_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "scuf",
+      "cvvh",
+      "cvvhd",
+      "cvvhdf",
+      "avvh"
+     ]
+    },
+    {
+     "name": "dialysis_machine_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "blood_flow_rate",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "pre_filter_replacement_fluid_rate",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "post_filter_replacement_fluid_rate",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "dialysate_flow_rate",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "ultrafiltration_out",
+     "data_type": "DOUBLE",
+     "required": true
+    }
+   ]
+  },
+  "drain": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "drain_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "placed_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "removed_dttm",
+     "data_type": "DATETIME",
+     "required": false
+    },
+    {
+     "name": "drain_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "chest_tube",
+      "foley",
+      "jp_drain",
+      "eud",
+      "evd",
+      "pigtail",
+      "ng_tube",
+      "og_tube",
+      "peg_tube",
+      "dobhoff"
+     ]
+    },
+    {
+     "name": "anatomical_location",
+     "data_type": "VARCHAR",
+     "required": true
+    }
+   ]
+  },
+  "ed_encounter": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "ed_encounter_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "ed_arrival_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "ed_departure_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "arrival_mode_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "arrival_mode_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "ems_air",
+      "ems_ground",
+      "law_enforcement",
+      "other",
+      "private_vehicle",
+      "transfer_ambulance",
+      "transfer_private_vehicle",
+      "unknown",
+      "walk_in"
+     ]
+    },
+    {
+     "name": "triage_system_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "triage_system_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "ctas",
+      "esi",
+      "other",
+      "other_5_level",
+      "unknown"
+     ]
+    },
+    {
+     "name": "triage_acuity_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "triage_acuity_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "level_1",
+      "level_2",
+      "level_3",
+      "level_4",
+      "level_5",
+      "other",
+      "unknown"
+     ]
+    },
+    {
+     "name": "triage_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "chief_complaint_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "ed_disposition_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "ed_disposition_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "admit",
+      "ama",
+      "discharge",
+      "expired",
+      "lwbs",
+      "observation",
+      "other",
+      "transfer"
+     ]
+    },
+    {
+     "name": "ed_disposition_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "ed_destination_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "ed_destination_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "acute_care_hosp",
+      "acute_ip_rehab",
+      "ama",
+      "assisted_living",
+      "chemical_dependency",
+      "expired",
+      "group_home",
+      "home",
+      "hospice",
+      "jail",
+      "ltach",
+      "lwbs",
+      "mental_health_hosp",
+      "missing",
+      "other",
+      "shelter",
+      "snf",
+      "still_admitted"
+     ]
+    },
+    {
+     "name": "ed_observation_status",
+     "data_type": "INT",
+     "required": true,
+     "permissible_values": [
+      0,
+      1
+     ]
+    }
+   ]
+  },
+  "hospital_diagnosis": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "diagnosis_code",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "diagnosis_code_format",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "ICD10CM",
+      "ICD9CM"
+     ]
+    },
+    {
+     "name": "diagnosis_primary",
+     "data_type": "INT",
+     "required": true,
+     "permissible_values": [
+      0,
+      1
+     ]
+    },
+    {
+     "name": "poa_present",
+     "data_type": "INT",
+     "required": true,
+     "permissible_values": [
+      0,
+      1
+     ]
+    }
+   ]
+  },
+  "hospitalization": {
+   "columns": [
+    {
+     "name": "patient_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "hospitalization_joined_id",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "admission_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "discharge_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "age_at_admission",
+     "data_type": "INT",
+     "required": true
+    },
+    {
+     "name": "admission_type_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "admission_type_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "ed",
+      "facility",
+      "osh",
+      "direct",
+      "elective",
+      "other"
+     ]
+    },
+    {
+     "name": "discharge_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "discharge_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "home",
+      "snf",
+      "expired",
+      "acute_ip_rehab",
+      "hospice",
+      "ltach",
+      "acute_care_hosp",
+      "group_home",
+      "chemical_dependency",
+      "ama",
+      "assisted_living",
+      "still_admitted",
+      "missing",
+      "other",
+      "mental_health_hosp",
+      "shelter",
+      "jail"
+     ]
+    },
+    {
+     "name": "zipcode_nine_digit",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "zipcode_five_digit",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "census_block_code",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "census_block_group_code",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "census_tract",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "state_code",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "county_code",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "fips_version",
+     "data_type": "VARCHAR",
+     "required": false,
+     "permissible_values": [
+      "2000",
+      "2010",
+      "2020"
+     ]
+    }
+   ]
+  },
+  "input": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "recorded_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "input_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "input_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "iv_crystalloid",
+      "iv_colloid",
+      "blood_products",
+      "parenteral_nutrition",
+      "po_intake",
+      "enteral_nutrition",
+      "enteral_water",
+      "iv_medication",
+      "enteral_medication",
+      "renal_replacement_fluids",
+      "flush_irrigation_urine",
+      "flush_irrigation_drain",
+      "flush_irrigation_gi",
+      "flush_irrigation_respiratory",
+      "flush_irrigation_other",
+      "other"
+     ]
+    },
+    {
+     "name": "input_group",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "iv_fluids",
+      "blood_products",
+      "nutrition",
+      "medication_fluids",
+      "renal_replacement_fluids",
+      "flush_irrigation",
+      "other"
+     ]
+    },
+    {
+     "name": "input_volume",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "lda_id",
+     "data_type": "VARCHAR",
+     "required": false
+    }
+   ],
+   "input_category_to_group_mapping": {
+    "iv_crystalloid": "iv_fluids",
+    "iv_colloid": "iv_fluids",
+    "blood_products": "blood_products",
+    "parenteral_nutrition": "nutrition",
+    "po_intake": "nutrition",
+    "enteral_nutrition": "nutrition",
+    "enteral_water": "nutrition",
+    "iv_medication": "medication_fluids",
+    "enteral_medication": "medication_fluids",
+    "renal_replacement_fluids": "renal_replacement_fluids",
+    "flush_irrigation_urine": "flush_irrigation",
+    "flush_irrigation_drain": "flush_irrigation",
+    "flush_irrigation_gi": "flush_irrigation",
+    "flush_irrigation_respiratory": "flush_irrigation",
+    "flush_irrigation_other": "flush_irrigation",
+    "other": "other"
+   }
+  },
+  "intermittent_dialysis": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "device_id",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "recorded_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "blood_flow_rate",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "dialysate_flow_rate",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "net_ultrafiltration_out",
+     "data_type": "DOUBLE",
+     "required": true
+    }
+   ]
+  },
+  "invasive_hemodynamics": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "recorded_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "measurement_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "measurement_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "cvp",
+      "rv_systolic",
+      "rv_diastolic",
+      "pa_systolic",
+      "pa_diastolic",
+      "pa_mean",
+      "pcwp",
+      "cco",
+      "co_thermodilution",
+      "co_index",
+      "co_fick",
+      "sv",
+      "svv",
+      "sv_index",
+      "svr",
+      "svr_index",
+      "evlw",
+      "evlw_index",
+      "gef",
+      "itbv_index",
+      "gedv",
+      "gedv_index",
+      "lvsw_index",
+      "tfcd0",
+      "tfc",
+      "do2"
+     ]
+    },
+    {
+     "name": "measurement_value",
+     "data_type": "DOUBLE",
+     "required": true
+    }
+   ]
+  },
+  "labs": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "lab_order_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "lab_collect_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "lab_result_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "lab_order_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "lab_order_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "aki_biomarkers",
+      "bal_panel",
+      "blood_gas",
+      "bmp",
+      "cardiac",
+      "cbc",
+      "coags",
+      "inflammatory",
+      "lft",
+      "misc",
+      "mixed_venous_blood_gas",
+      "peritoneal_fluid_panel",
+      "pleural_fluid_panel",
+      "poc",
+      "tft",
+      "urine_chemistry",
+      "urine_toxicology"
+     ]
+    },
+    {
+     "name": "lab_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "lab_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "ada",
+      "albumin",
+      "albumin_to_creatinine_ratio",
+      "alkaline_phosphatase",
+      "alt",
+      "amphetamine",
+      "amylase",
+      "ast",
+      "barbiturate",
+      "basophils_absolute",
+      "basophils_percent",
+      "benzodiazepine",
+      "bicarbonate",
+      "bilirubin",
+      "bilirubin_conjugated",
+      "bilirubin_total",
+      "bilirubin_unconjugated",
+      "bnp",
+      "bun",
+      "calcium_ionized",
+      "calcium_total",
+      "chloride",
+      "cholesterol",
+      "ckmb",
+      "co2",
+      "cocaine",
+      "creatinine",
+      "crp",
+      "cystatin_c",
+      "d_dimer",
+      "eosinophils_absolute",
+      "eosinophils_percent",
+      "esr",
+      "ethanol",
+      "fentanyl",
+      "ferritin",
+      "fibrinogen",
+      "free_t3",
+      "free_t4",
+      "glucose",
+      "hematocrit",
+      "hematocrit_percent",
+      "hemoglobin",
+      "igfbp7",
+      "inr",
+      "interleukin_01",
+      "interleukin_02",
+      "interleukin_02_receptor_soluble",
+      "interleukin_05",
+      "interleukin_06",
+      "interleukin_08",
+      "interleukin_10",
+      "interleukin_13",
+      "interleukin_18",
+      "kim_1",
+      "lactate",
+      "ldh",
+      "lipase",
+      "lymphocytes_absolute",
+      "lymphocytes_percent",
+      "macrophages_percent",
+      "magnesium",
+      "mesothelial",
+      "methadone",
+      "monocytes_absolute",
+      "monocytes_percent",
+      "nag",
+      "neutrophils_absolute",
+      "neutrophils_percent",
+      "ngal",
+      "neuron_specific_enolase",
+      "nt_pro_bnp",
+      "opiate",
+      "other_absolute",
+      "oxycodone",
+      "pco2_arterial",
+      "pco2_venous",
+      "pcp",
+      "ph_arterial",
+      "ph_venous",
+      "phosphate",
+      "plasma_absolute",
+      "platelet_count",
+      "po2_arterial",
+      "po2_mixed_venous",
+      "potassium",
+      "procalcitonin",
+      "protein",
+      "protein_to_creatinine_ratio",
+      "pt",
+      "ptt",
+      "rbc",
+      "rbc_absolute",
+      "so2_arterial",
+      "so2_central_venous",
+      "so2_mixed_venous",
+      "sodium",
+      "timp_2",
+      "timp_2_igfbp7",
+      "total_protein",
+      "toxic_granulation",
+      "triglycerides",
+      "troponin_i",
+      "troponin_t",
+      "tsh",
+      "wbc",
+      "wbc_absolute"
+     ]
+    },
+    {
+     "name": "lab_value",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "lab_value_numeric",
+     "data_type": "DOUBLE",
+     "required": false
+    },
+    {
+     "name": "reference_unit",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "lab_specimen_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "lab_specimen_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "plasma_blood",
+      "pleural",
+      "peritoneal",
+      "urine",
+      "bal"
+     ]
+    },
+    {
+     "name": "lab_loinc_code",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "loinc_version",
+     "data_type": "VARCHAR",
+     "required": false
+    }
+   ]
+  },
+  "line": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "line_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "placed_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "removed_dttm",
+     "data_type": "DATETIME",
+     "required": false
+    },
+    {
+     "name": "line_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "cvc",
+      "art_line",
+      "picc",
+      "midline",
+      "dialysis_catheter",
+      "swan_ganz",
+      "cordis",
+      "piv"
+     ]
+    },
+    {
+     "name": "line_site",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "right_ij",
+      "left_ij",
+      "right_subclavian",
+      "left_subclavian",
+      "right_femoral",
+      "left_femoral",
+      "right_radial",
+      "left_radial",
+      "right_brachial",
+      "left_brachial",
+      "other"
+     ]
+    },
+    {
+     "name": "lumen_count",
+     "data_type": "INT",
+     "required": false
+    }
+   ]
+  },
+  "mcs": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "recorded_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "support_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "support_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "ecmo",
+      "lvad",
+      "rvad",
+      "iabp"
+     ]
+    },
+    {
+     "name": "device_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "device_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "cardiohelp",
+      "rotaflow",
+      "centrimag",
+      "tandemheart",
+      "impella",
+      "durable",
+      "cardiosave"
+     ]
+    },
+    {
+     "name": "config_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "config_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "v_v",
+      "v_a",
+      "v_av",
+      "vv_a",
+      "v_pa_single",
+      "v_pa_dual",
+      "hybrid",
+      "cp",
+      "2_5",
+      "2_5_or_cp",
+      "5_0",
+      "5_5",
+      "rp",
+      "rp_flex",
+      "heartware",
+      "heartmate2",
+      "heartmate3",
+      "central"
+     ]
+    },
+    {
+     "name": "setting_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "setting_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "rpm",
+      "flow",
+      "sweep",
+      "fdo2",
+      "p_ven",
+      "p_art",
+      "delta_pressure",
+      "power",
+      "pulsatility_index",
+      "performance",
+      "iabp_ratio"
+     ]
+    },
+    {
+     "name": "setting_value",
+     "data_type": "DOUBLE",
+     "required": true
+    }
+   ]
+  },
+  "medication_admin_continuous": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "med_order_id",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "administering_provider_id",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "admin_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "med_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "med_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "albumin_5",
+      "albumin_25",
+      "albuterol",
+      "alprostadil",
+      "aminocaproic_acid",
+      "aminophylline",
+      "amiodarone",
+      "angiotensin",
+      "argatroban",
+      "baclofen",
+      "bivalirudin",
+      "bumetanide",
+      "bupivacaine",
+      "cangrelor",
+      "cisatracurium",
+      "clevidipine",
+      "dexmedetomidine",
+      "dextrose_10_water",
+      "dextrose_5_water",
+      "dextrose_other",
+      "diltiazem",
+      "dobutamine",
+      "dopamine",
+      "epinephrine",
+      "epoprostenol",
+      "eptifibatide",
+      "esmolol",
+      "esomeprazole",
+      "fentanyl",
+      "furosemide",
+      "heparin",
+      "hydromorphone",
+      "insulin",
+      "ipratropium",
+      "isoproterenol",
+      "ketamine",
+      "labetalol",
+      "lactated_ringers_solution",
+      "levothyroxine",
+      "lidocaine",
+      "liothyronine",
+      "lorazepam",
+      "magnesium_sulfate",
+      "midazolam",
+      "milrinone",
+      "morphine",
+      "naloxone",
+      "nicardipine",
+      "nitric_oxide",
+      "nitroglycerin",
+      "nitroprusside",
+      "norepinephrine",
+      "octreotide",
+      "pantoprazole",
+      "papaverine",
+      "pentobarbital",
+      "phentolamine",
+      "phenylephrine",
+      "pitocin",
+      "plasma_lyte",
+      "procainamide",
+      "propofol",
+      "remifentanil",
+      "rocuronium",
+      "ropivacaine",
+      "sodium_bicarbonate",
+      "sodium_chloride",
+      "tacrolimus",
+      "terbutaline",
+      "torsemide",
+      "tpn",
+      "treprostinil",
+      "vasopressin",
+      "vecuronium",
+      "zidovudine"
+     ]
+    },
+    {
+     "name": "med_group",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "vasoactives",
+      "sedation",
+      "diuretics",
+      "anticoagulation",
+      "cardiac",
+      "paralytics",
+      "pulmonary_vasodilators_iv",
+      "pulmonary_vasodilators_inhaled",
+      "gastrointestinal",
+      "inhaled",
+      "endocrine",
+      "fluids_electrolytes",
+      "others"
+     ]
+    },
+    {
+     "name": "med_route_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "med_route_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "im",
+      "inhaled",
+      "iv"
+     ]
+    },
+    {
+     "name": "med_dose",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "med_dose_unit",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "rx_norm_code",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "volume_infusion_rate",
+     "data_type": "DOUBLE",
+     "required": false
+    },
+    {
+     "name": "volume_infusion_rate_unit",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "mar_action_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "mar_action_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "dose_change",
+      "going",
+      "start",
+      "stop",
+      "verify",
+      "other"
+     ]
+    },
+    {
+     "name": "mar_action_group",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "administered",
+      "not_administered",
+      "other"
+     ]
+    }
+   ],
+   "med_category_to_group_mapping": {
+    "albumin_5": "fluids_electrolytes",
+    "albumin_25": "fluids_electrolytes",
+    "albuterol": "inhaled",
+    "alprostadil": "pulmonary_vasodilators_iv",
+    "aminocaproic_acid": "others",
+    "aminophylline": "others",
+    "amiodarone": "cardiac",
+    "angiotensin": "vasoactives",
+    "argatroban": "anticoagulation",
+    "baclofen": "others",
+    "bivalirudin": "anticoagulation",
+    "bumetanide": "diuretics",
+    "bupivacaine": "others",
+    "cangrelor": "anticoagulation",
+    "cisatracurium": "paralytics",
+    "clevidipine": "cardiac",
+    "dexmedetomidine": "sedation",
+    "dextrose_10_water": "fluids_electrolytes",
+    "dextrose_5_water": "fluids_electrolytes",
+    "dextrose_other": "others",
+    "diltiazem": "cardiac",
+    "dobutamine": "vasoactives",
+    "dopamine": "vasoactives",
+    "epinephrine": "vasoactives",
+    "epoprostenol": [
+     "pulmonary_vasodilators_iv",
+     "pulmonary_vasodilators_inhaled"
+    ],
+    "eptifibatide": "anticoagulation",
+    "esmolol": "cardiac",
+    "esomeprazole": "gastrointestinal",
+    "fentanyl": "sedation",
+    "furosemide": "diuretics",
+    "heparin": "anticoagulation",
+    "hydromorphone": "sedation",
+    "insulin": "endocrine",
+    "ipratropium": "inhaled",
+    "isoproterenol": "vasoactives",
+    "ketamine": "sedation",
+    "labetalol": "cardiac",
+    "lactated_ringers_solution": "fluids_electrolytes",
+    "levothyroxine": "endocrine",
+    "lidocaine": "cardiac",
+    "liothyronine": "endocrine",
+    "lorazepam": "sedation",
+    "magnesium_sulfate": "others",
+    "midazolam": "sedation",
+    "milrinone": "vasoactives",
+    "morphine": "sedation",
+    "naloxone": "others",
+    "nicardipine": "cardiac",
+    "nitric_oxide": "pulmonary_vasodilators_inhaled",
+    "nitroglycerin": "cardiac",
+    "nitroprusside": "cardiac",
+    "norepinephrine": "vasoactives",
+    "octreotide": "gastrointestinal",
+    "pantoprazole": "gastrointestinal",
+    "papaverine": "cardiac",
+    "pentobarbital": "sedation",
+    "phentolamine": "others",
+    "phenylephrine": "vasoactives",
+    "pitocin": "others",
+    "plasma_lyte": "fluids_electrolytes",
+    "procainamide": "cardiac",
+    "propofol": "sedation",
+    "remifentanil": "sedation",
+    "rocuronium": "paralytics",
+    "ropivacaine": "others",
+    "sodium_bicarbonate": "fluids_electrolytes",
+    "sodium_chloride": "fluids_electrolytes",
+    "tacrolimus": "others",
+    "terbutaline": [
+     "inhaled",
+     "others"
+    ],
+    "torsemide": "diuretics",
+    "tpn": "fluids_electrolytes",
+    "treprostinil": "pulmonary_vasodilators_iv",
+    "vasopressin": "vasoactives",
+    "vecuronium": "paralytics",
+    "zidovudine": "others"
+   }
+  },
+  "medication_admin_intermittent": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "med_order_id",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "administering_provider_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "admin_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "med_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "med_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "acetaminophen",
+      "acyclovir",
+      "alteplase",
+      "amikacin",
+      "amoxicillin",
+      "amoxicillin_clavulanate",
+      "amphotericin_b",
+      "ampicillin",
+      "ampicillin_sulbactam",
+      "anakinra",
+      "anidulafungin",
+      "atracurium",
+      "axicabtagene_ciloleucel",
+      "azilsartan",
+      "azithromycin",
+      "aztreonam",
+      "baricitinib",
+      "benazepril",
+      "benazepril_hctz",
+      "betamethasone",
+      "bisoprolol",
+      "bisoprolol_hctz",
+      "blinatumomab",
+      "brexucabtagene_autoleucel",
+      "bumetanide",
+      "canagliflozin",
+      "canagliflozin_metformin",
+      "candesartan",
+      "candesartan_hctz",
+      "captopril",
+      "carvedilol",
+      "carvedilol_cr",
+      "caspofungin",
+      "cefaclor",
+      "cefadroxil",
+      "cefamandole",
+      "cefazolin",
+      "cefdinir",
+      "cefepime",
+      "cefiderocol",
+      "cefixime",
+      "cefmetazole",
+      "cefonicid",
+      "cefoperazone",
+      "cefotaxime",
+      "cefotetan",
+      "cefoxitin",
+      "cefpodoxime",
+      "cefprozil",
+      "ceftaroline",
+      "ceftazidime",
+      "ceftazidime_avibactam",
+      "ceftazidime_clavulanate",
+      "ceftibuten",
+      "ceftizoxime",
+      "ceftolozane_tazobactam",
+      "ceftriaxone",
+      "cefuroxime",
+      "cephalexin",
+      "cephalothin",
+      "cephapirin",
+      "cephradine",
+      "chloramphenicol",
+      "chlorothiazide",
+      "chlorthalidone",
+      "cidofovir",
+      "ciltacabtagene_autoleucel",
+      "cinoxacin",
+      "ciprofloxacin",
+      "cisatracurium",
+      "clarithromycin",
+      "clindamycin",
+      "cloxacillin",
+      "colistin",
+      "dalbavancin",
+      "dapagliflozin",
+      "dapagliflozin_metformin",
+      "dapagliflozin_saxagliptin",
+      "daptomycin",
+      "delafloxacin",
+      "dexamethasone",
+      "diatrizoate",
+      "diazepam",
+      "dicloxacillin",
+      "digoxin",
+      "diphenhydramine",
+      "doripenem",
+      "dornase_alfa",
+      "doxycycline",
+      "elratanamab",
+      "empagliflozin",
+      "empagliflozin_linagliptin",
+      "empagliflozin_metformin",
+      "enalapril",
+      "enalapril_hctz",
+      "epcoritamab",
+      "epinephrine",
+      "eplerenone",
+      "eprosartan",
+      "eravacycline",
+      "ertapenem",
+      "ertugliflozin",
+      "erythromycin",
+      "etomidate",
+      "fentanyl",
+      "fidaxomicin",
+      "fluconazole",
+      "fludrocortisone",
+      "foscarnet",
+      "fosfomycin",
+      "fosinopril",
+      "furosemide",
+      "gadobenate",
+      "gadobutrol",
+      "gadodiamide",
+      "gadopentetate",
+      "gadoterate",
+      "gadoteridol",
+      "gadoxetate",
+      "ganciclovir",
+      "gatifloxacin",
+      "gentamicin",
+      "glofitamab",
+      "haloperidol",
+      "hydralazine",
+      "hydralazine_isosorbide",
+      "hydrochlorothiazide",
+      "hydrocortisone",
+      "hydromorphone",
+      "hydroxocobalamin",
+      "hypertonic_saline_20",
+      "hypertonic_saline_23.4",
+      "hypertonic_saline_3",
+      "hypertonic_saline_7",
+      "hypertonic_saline_7.5",
+      "idecabtagene_vicleucel",
+      "imipenem",
+      "imipenem_relebactam",
+      "indapamide",
+      "iobitridol",
+      "iodixanol",
+      "iohexol",
+      "iomeprol",
+      "iopamidol",
+      "ioversol",
+      "ioxaglate",
+      "irbesartan",
+      "irbesartan_hctz",
+      "isavuconazole",
+      "isavuconazonium",
+      "isosorbide_dinitrate",
+      "itraconazole",
+      "ivabradine",
+      "kanamycin",
+      "ketamine",
+      "lefamulin",
+      "levofloxacin",
+      "lincomycin",
+      "linezolid",
+      "linvoseltamab",
+      "lisinopril",
+      "lisinopril_hctz",
+      "lisocabtagene_maraleucel",
+      "lorazepam",
+      "losartan",
+      "losartan_hctz",
+      "magnesium_repletion",
+      "mannitol",
+      "maribavir",
+      "meropenem",
+      "meropenem_vaborbactam",
+      "methicillin",
+      "methylene_blue",
+      "methylprednisolone",
+      "metolazone",
+      "metoprolol_succinate",
+      "metoprolol_succinate_hctz",
+      "metoprolol_tartrate",
+      "metoprolol_tartrate_hctz",
+      "metrizamide",
+      "metronidazole",
+      "mezlocillin",
+      "micafungin",
+      "micafungin_posaconazole_voriconazole",
+      "midazolam",
+      "minocycline",
+      "moexipril",
+      "morphine",
+      "mosunetuzumab",
+      "moxifloxacin",
+      "nafcillin",
+      "naloxone",
+      "nitrofurantoin",
+      "norfloxacin",
+      "nystatin",
+      "ofloxacin",
+      "olanzapine",
+      "olmesartan",
+      "olmesartan_hctz",
+      "omadacycline",
+      "oritavancin",
+      "oseltamivir",
+      "oxacillin",
+      "oxycodone",
+      "penicillin",
+      "peramivir",
+      "perindopril",
+      "perindopril_amlodipine",
+      "phosphate_repletion",
+      "piperacillin_tazobactam",
+      "pivampicillin",
+      "plazomicin",
+      "polymyxin_b",
+      "posaconazole",
+      "potassium_repletion",
+      "prednisolone",
+      "prednisone",
+      "promethazine",
+      "propofol",
+      "quetiapine",
+      "quinapril",
+      "quinupristin_dalfopristin",
+      "ramipril",
+      "ramipril_amlodipine",
+      "remdesivir",
+      "rezafungin",
+      "ribavirin",
+      "rifampin",
+      "risperidone",
+      "rocuronium",
+      "sacubitril_valsartan",
+      "siltuximab",
+      "sotagliflozin",
+      "spironolactone",
+      "spironolactone_hctz",
+      "streptomycin",
+      "succinylcholine",
+      "sulbactam_durlobactam",
+      "sulfadiazine",
+      "sulfadiazine_trimethoprim",
+      "sulfisoxazole",
+      "talquetamab",
+      "tarlatamab",
+      "tebentafusp",
+      "teclistamab",
+      "tedizolid",
+      "telavancin",
+      "telithromycin",
+      "telmisartan",
+      "telmisartan_amlodipine",
+      "tetracycline",
+      "ticarcillin",
+      "ticarcillin_clavulanate",
+      "tigecycline",
+      "tisagenlecleucel",
+      "tobramycin",
+      "tocilizumab",
+      "torsemide",
+      "trandolapril",
+      "trimethoprim",
+      "trimethoprim_sulfamethoxazole",
+      "valacyclovir",
+      "valganciclovir",
+      "valproate",
+      "valsartan",
+      "valsartan_amlodipine",
+      "valsartan_hctz",
+      "vancomycin",
+      "vecuronium",
+      "vericiguat",
+      "voriconazole"
+     ]
+    },
+    {
+     "name": "med_group",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "analgesia",
+      "anti_hypertensive",
+      "antipsychotic",
+      "anxiolytic",
+      "car_t",
+      "cardiac_glycoside",
+      "cms_sepsis_qualifying_antibiotics",
+      "contrast_agent",
+      "diabetes",
+      "diuretic",
+      "other",
+      "paralytics",
+      "sedation",
+      "steroid",
+      "vasopressor"
+     ]
+    },
+    {
+     "name": "med_route_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "med_route_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "buccal_sublingual",
+      "enteral",
+      "im",
+      "intrapleural",
+      "iv"
+     ]
+    },
+    {
+     "name": "med_dose",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "med_dose_unit",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "rx_norm_code",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "mar_action_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "mar_action_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "given",
+      "not_given",
+      "bolus",
+      "other"
+     ]
+    },
+    {
+     "name": "mar_action_group",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "administered",
+      "not_administered",
+      "other"
+     ]
+    }
+   ],
+   "med_category_to_group_mapping": {
+    "acetaminophen": [
+     "analgesia"
+    ],
+    "acyclovir": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "alteplase": [
+     "other"
+    ],
+    "amikacin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "amoxicillin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "amoxicillin_clavulanate": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "amphotericin_b": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ampicillin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ampicillin_sulbactam": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "anakinra": [
+     "other"
+    ],
+    "anidulafungin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "atracurium": [
+     "paralytics"
+    ],
+    "axicabtagene_ciloleucel": [
+     "car_t"
+    ],
+    "azilsartan": [
+     "anti_hypertensive"
+    ],
+    "azithromycin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "aztreonam": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "baricitinib": [
+     "other"
+    ],
+    "benazepril": [
+     "anti_hypertensive"
+    ],
+    "benazepril_hctz": [
+     "anti_hypertensive"
+    ],
+    "betamethasone": [
+     "steroid"
+    ],
+    "bisoprolol": [
+     "anti_hypertensive"
+    ],
+    "bisoprolol_hctz": [
+     "anti_hypertensive"
+    ],
+    "blinatumomab": [
+     "other"
+    ],
+    "brexucabtagene_autoleucel": [
+     "car_t"
+    ],
+    "bumetanide": [
+     "diuretic"
+    ],
+    "canagliflozin": [
+     "diabetes"
+    ],
+    "canagliflozin_metformin": [
+     "diabetes"
+    ],
+    "candesartan": [
+     "anti_hypertensive"
+    ],
+    "candesartan_hctz": [
+     "anti_hypertensive"
+    ],
+    "captopril": [
+     "anti_hypertensive"
+    ],
+    "carvedilol": [
+     "anti_hypertensive"
+    ],
+    "carvedilol_cr": [
+     "anti_hypertensive"
+    ],
+    "caspofungin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cefaclor": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cefadroxil": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cefamandole": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cefazolin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cefdinir": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cefepime": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cefiderocol": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cefixime": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cefmetazole": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cefonicid": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cefoperazone": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cefotaxime": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cefotetan": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cefoxitin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cefpodoxime": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cefprozil": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ceftaroline": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ceftazidime": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ceftazidime_avibactam": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ceftazidime_clavulanate": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ceftibuten": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ceftizoxime": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ceftolozane_tazobactam": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ceftriaxone": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cefuroxime": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cephalexin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cephalothin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cephapirin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cephradine": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "chloramphenicol": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "chlorothiazide": [
+     "diuretic"
+    ],
+    "chlorthalidone": [
+     "diuretic"
+    ],
+    "cidofovir": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ciltacabtagene_autoleucel": [
+     "car_t"
+    ],
+    "cinoxacin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ciprofloxacin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cisatracurium": [
+     "paralytics"
+    ],
+    "clarithromycin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "clindamycin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "cloxacillin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "colistin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "dalbavancin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "dapagliflozin": [
+     "diabetes"
+    ],
+    "dapagliflozin_metformin": [
+     "diabetes"
+    ],
+    "dapagliflozin_saxagliptin": [
+     "diabetes"
+    ],
+    "daptomycin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "delafloxacin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "dexamethasone": [
+     "steroid"
+    ],
+    "diatrizoate": [
+     "contrast_agent"
+    ],
+    "diazepam": [
+     "anxiolytic"
+    ],
+    "dicloxacillin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "digoxin": [
+     "cardiac_glycoside"
+    ],
+    "diphenhydramine": [
+     "other"
+    ],
+    "doripenem": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "dornase_alfa": [
+     "other"
+    ],
+    "doxycycline": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "elratanamab": [
+     "other"
+    ],
+    "empagliflozin": [
+     "diabetes"
+    ],
+    "empagliflozin_linagliptin": [
+     "diabetes"
+    ],
+    "empagliflozin_metformin": [
+     "diabetes"
+    ],
+    "enalapril": [
+     "anti_hypertensive"
+    ],
+    "enalapril_hctz": [
+     "anti_hypertensive"
+    ],
+    "epcoritamab": [
+     "other"
+    ],
+    "epinephrine": [
+     "vasopressor"
+    ],
+    "eplerenone": [
+     "anti_hypertensive"
+    ],
+    "eprosartan": [
+     "anti_hypertensive"
+    ],
+    "eravacycline": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ertapenem": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ertugliflozin": [
+     "diabetes"
+    ],
+    "erythromycin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "etomidate": [
+     "sedation"
+    ],
+    "fentanyl": [
+     "analgesia"
+    ],
+    "fidaxomicin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "fluconazole": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "fludrocortisone": [
+     "steroid"
+    ],
+    "foscarnet": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "fosfomycin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "fosinopril": [
+     "anti_hypertensive"
+    ],
+    "furosemide": [
+     "diuretic"
+    ],
+    "gadobenate": [
+     "contrast_agent"
+    ],
+    "gadobutrol": [
+     "contrast_agent"
+    ],
+    "gadodiamide": [
+     "contrast_agent"
+    ],
+    "gadopentetate": [
+     "contrast_agent"
+    ],
+    "gadoterate": [
+     "contrast_agent"
+    ],
+    "gadoteridol": [
+     "contrast_agent"
+    ],
+    "gadoxetate": [
+     "contrast_agent"
+    ],
+    "ganciclovir": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "gatifloxacin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "gentamicin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "glofitamab": [
+     "other"
+    ],
+    "haloperidol": [
+     "antipsychotic"
+    ],
+    "hydralazine": [
+     "anti_hypertensive"
+    ],
+    "hydralazine_isosorbide": [
+     "anti_hypertensive"
+    ],
+    "hydrochlorothiazide": [
+     "diuretic"
+    ],
+    "hydrocortisone": [
+     "steroid"
+    ],
+    "hydromorphone": [
+     "analgesia"
+    ],
+    "hydroxocobalamin": [
+     "vasopressor"
+    ],
+    "hypertonic_saline_20": [
+     "other"
+    ],
+    "hypertonic_saline_23.4": [
+     "other"
+    ],
+    "hypertonic_saline_3": [
+     "other"
+    ],
+    "hypertonic_saline_7": [
+     "other"
+    ],
+    "hypertonic_saline_7.5": [
+     "other"
+    ],
+    "idecabtagene_vicleucel": [
+     "car_t"
+    ],
+    "imipenem": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "imipenem_relebactam": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "indapamide": [
+     "diuretic"
+    ],
+    "iobitridol": [
+     "contrast_agent"
+    ],
+    "iodixanol": [
+     "contrast_agent"
+    ],
+    "iohexol": [
+     "contrast_agent"
+    ],
+    "iomeprol": [
+     "contrast_agent"
+    ],
+    "iopamidol": [
+     "contrast_agent"
+    ],
+    "ioversol": [
+     "contrast_agent"
+    ],
+    "ioxaglate": [
+     "contrast_agent"
+    ],
+    "irbesartan": [
+     "anti_hypertensive"
+    ],
+    "irbesartan_hctz": [
+     "anti_hypertensive"
+    ],
+    "isavuconazole": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "isavuconazonium": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "isosorbide_dinitrate": [
+     "anti_hypertensive"
+    ],
+    "itraconazole": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ivabradine": [
+     "other"
+    ],
+    "kanamycin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ketamine": [
+     "sedation"
+    ],
+    "lefamulin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "levofloxacin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "lincomycin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "linezolid": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "linvoseltamab": [
+     "other"
+    ],
+    "lisinopril": [
+     "anti_hypertensive"
+    ],
+    "lisinopril_hctz": [
+     "anti_hypertensive"
+    ],
+    "lisocabtagene_maraleucel": [
+     "car_t"
+    ],
+    "lorazepam": [
+     "anxiolytic"
+    ],
+    "losartan": [
+     "anti_hypertensive"
+    ],
+    "losartan_hctz": [
+     "anti_hypertensive"
+    ],
+    "magnesium_repletion": [
+     "other"
+    ],
+    "mannitol": [
+     "other"
+    ],
+    "maribavir": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "meropenem": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "meropenem_vaborbactam": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "methicillin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "methylene_blue": [
+     "vasopressor"
+    ],
+    "methylprednisolone": [
+     "steroid"
+    ],
+    "metolazone": [
+     "diuretic"
+    ],
+    "metoprolol_succinate": [
+     "anti_hypertensive"
+    ],
+    "metoprolol_succinate_hctz": [
+     "anti_hypertensive"
+    ],
+    "metoprolol_tartrate": [
+     "anti_hypertensive"
+    ],
+    "metoprolol_tartrate_hctz": [
+     "anti_hypertensive"
+    ],
+    "metrizamide": [
+     "contrast_agent"
+    ],
+    "metronidazole": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "mezlocillin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "micafungin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "micafungin_posaconazole_voriconazole": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "midazolam": [
+     "sedation"
+    ],
+    "minocycline": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "moexipril": [
+     "anti_hypertensive"
+    ],
+    "morphine": [
+     "analgesia"
+    ],
+    "mosunetuzumab": [
+     "other"
+    ],
+    "moxifloxacin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "nafcillin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "naloxone": [
+     "other"
+    ],
+    "nitrofurantoin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "norfloxacin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "nystatin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ofloxacin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "olanzapine": [
+     "antipsychotic"
+    ],
+    "olmesartan": [
+     "anti_hypertensive"
+    ],
+    "olmesartan_hctz": [
+     "anti_hypertensive"
+    ],
+    "omadacycline": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "oritavancin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "oseltamivir": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "oxacillin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "oxycodone": [
+     "analgesia"
+    ],
+    "penicillin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "peramivir": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "perindopril": [
+     "anti_hypertensive"
+    ],
+    "perindopril_amlodipine": [
+     "anti_hypertensive"
+    ],
+    "phosphate_repletion": [
+     "other"
+    ],
+    "piperacillin_tazobactam": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "pivampicillin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "plazomicin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "polymyxin_b": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "posaconazole": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "potassium_repletion": [
+     "other"
+    ],
+    "prednisolone": [
+     "steroid"
+    ],
+    "prednisone": [
+     "steroid"
+    ],
+    "promethazine": [
+     "other"
+    ],
+    "propofol": [
+     "sedation"
+    ],
+    "quetiapine": [
+     "antipsychotic"
+    ],
+    "quinapril": [
+     "anti_hypertensive"
+    ],
+    "quinupristin_dalfopristin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ramipril": [
+     "anti_hypertensive"
+    ],
+    "ramipril_amlodipine": [
+     "anti_hypertensive"
+    ],
+    "remdesivir": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "rezafungin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ribavirin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "rifampin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "risperidone": [
+     "antipsychotic"
+    ],
+    "rocuronium": [
+     "paralytics"
+    ],
+    "sacubitril_valsartan": [
+     "anti_hypertensive"
+    ],
+    "siltuximab": [
+     "other"
+    ],
+    "sotagliflozin": [
+     "diabetes"
+    ],
+    "spironolactone": [
+     "anti_hypertensive"
+    ],
+    "spironolactone_hctz": [
+     "anti_hypertensive"
+    ],
+    "streptomycin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "succinylcholine": [
+     "paralytics"
+    ],
+    "sulbactam_durlobactam": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "sulfadiazine": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "sulfadiazine_trimethoprim": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "sulfisoxazole": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "talquetamab": [
+     "other"
+    ],
+    "tarlatamab": [
+     "other"
+    ],
+    "tebentafusp": [
+     "other"
+    ],
+    "teclistamab": [
+     "other"
+    ],
+    "tedizolid": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "telavancin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "telithromycin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "telmisartan": [
+     "anti_hypertensive"
+    ],
+    "telmisartan_amlodipine": [
+     "anti_hypertensive"
+    ],
+    "tetracycline": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ticarcillin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "ticarcillin_clavulanate": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "tigecycline": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "tisagenlecleucel": [
+     "car_t"
+    ],
+    "tobramycin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "tocilizumab": [
+     "other"
+    ],
+    "torsemide": [
+     "diuretic"
+    ],
+    "trandolapril": [
+     "anti_hypertensive"
+    ],
+    "trimethoprim": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "trimethoprim_sulfamethoxazole": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "valacyclovir": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "valganciclovir": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "valproate": [
+     "other"
+    ],
+    "valsartan": [
+     "anti_hypertensive"
+    ],
+    "valsartan_amlodipine": [
+     "anti_hypertensive"
+    ],
+    "valsartan_hctz": [
+     "anti_hypertensive"
+    ],
+    "vancomycin": [
+     "cms_sepsis_qualifying_antibiotics"
+    ],
+    "vecuronium": [
+     "paralytics"
+    ],
+    "vericiguat": [
+     "other"
+    ],
+    "voriconazole": [
+     "cms_sepsis_qualifying_antibiotics"
+    ]
+   }
+  },
+  "medication_orders": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "med_order_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "ordering_provider_id",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "order_start_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "order_end_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "ordered_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "med_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "med_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "acetaminophen",
+      "acyclovir",
+      "albumin_25",
+      "albumin_5",
+      "albuterol",
+      "alprostadil",
+      "alteplase",
+      "amikacin",
+      "aminocaproic_acid",
+      "aminophylline",
+      "amiodarone",
+      "amoxicillin",
+      "amoxicillin_clavulanate",
+      "amphotericin_b",
+      "ampicillin",
+      "ampicillin_sulbactam",
+      "anakinra",
+      "angiotensin",
+      "anidulafungin",
+      "argatroban",
+      "atracurium",
+      "axicabtagene_ciloleucel",
+      "azilsartan",
+      "azithromycin",
+      "aztreonam",
+      "baclofen",
+      "baricitinib",
+      "benazepril",
+      "benazepril_hctz",
+      "betamethasone",
+      "bisoprolol",
+      "bisoprolol_hctz",
+      "bivalirudin",
+      "blinatumomab",
+      "brexucabtagene_autoleucel",
+      "bumetanide",
+      "bupivacaine",
+      "canagliflozin",
+      "canagliflozin_metformin",
+      "candesartan",
+      "candesartan_hctz",
+      "cangrelor",
+      "captopril",
+      "carvedilol",
+      "carvedilol_cr",
+      "caspofungin",
+      "cefaclor",
+      "cefadroxil",
+      "cefamandole",
+      "cefazolin",
+      "cefdinir",
+      "cefepime",
+      "cefiderocol",
+      "cefixime",
+      "cefmetazole",
+      "cefonicid",
+      "cefoperazone",
+      "cefotaxime",
+      "cefotetan",
+      "cefoxitin",
+      "cefpodoxime",
+      "cefprozil",
+      "ceftaroline",
+      "ceftazidime",
+      "ceftazidime_avibactam",
+      "ceftazidime_clavulanate",
+      "ceftibuten",
+      "ceftizoxime",
+      "ceftolozane_tazobactam",
+      "ceftriaxone",
+      "cefuroxime",
+      "cephalexin",
+      "cephalothin",
+      "cephapirin",
+      "cephradine",
+      "chloramphenicol",
+      "chlorothiazide",
+      "chlorthalidone",
+      "cidofovir",
+      "ciltacabtagene_autoleucel",
+      "cinoxacin",
+      "ciprofloxacin",
+      "cisatracurium",
+      "clarithromycin",
+      "clevidipine",
+      "clindamycin",
+      "cloxacillin",
+      "colistin",
+      "dalbavancin",
+      "dapagliflozin",
+      "dapagliflozin_metformin",
+      "dapagliflozin_saxagliptin",
+      "daptomycin",
+      "delafloxacin",
+      "dexamethasone",
+      "dexmedetomidine",
+      "dextrose_10_water",
+      "dextrose_5_water",
+      "dextrose_other",
+      "diatrizoate",
+      "diazepam",
+      "dicloxacillin",
+      "digoxin",
+      "diltiazem",
+      "diphenhydramine",
+      "dobutamine",
+      "dopamine",
+      "doripenem",
+      "dornase_alfa",
+      "doxycycline",
+      "elratanamab",
+      "empagliflozin",
+      "empagliflozin_linagliptin",
+      "empagliflozin_metformin",
+      "enalapril",
+      "enalapril_hctz",
+      "epcoritamab",
+      "epinephrine",
+      "eplerenone",
+      "epoprostenol",
+      "eprosartan",
+      "eptifibatide",
+      "eravacycline",
+      "ertapenem",
+      "ertugliflozin",
+      "erythromycin",
+      "esmolol",
+      "esomeprazole",
+      "etomidate",
+      "fentanyl",
+      "fidaxomicin",
+      "fluconazole",
+      "fludrocortisone",
+      "foscarnet",
+      "fosfomycin",
+      "fosinopril",
+      "furosemide",
+      "gadobenate",
+      "gadobutrol",
+      "gadodiamide",
+      "gadopentetate",
+      "gadoterate",
+      "gadoteridol",
+      "gadoxetate",
+      "ganciclovir",
+      "gatifloxacin",
+      "gentamicin",
+      "glofitamab",
+      "haloperidol",
+      "heparin",
+      "hydralazine",
+      "hydralazine_isosorbide",
+      "hydrochlorothiazide",
+      "hydrocortisone",
+      "hydromorphone",
+      "hydroxocobalamin",
+      "hypertonic_saline_20",
+      "hypertonic_saline_23.4",
+      "hypertonic_saline_3",
+      "hypertonic_saline_7",
+      "hypertonic_saline_7.5",
+      "idecabtagene_vicleucel",
+      "imipenem",
+      "imipenem_relebactam",
+      "indapamide",
+      "insulin",
+      "iobitridol",
+      "iodixanol",
+      "iohexol",
+      "iomeprol",
+      "iopamidol",
+      "ioversol",
+      "ioxaglate",
+      "ipratropium",
+      "irbesartan",
+      "irbesartan_hctz",
+      "isavuconazole",
+      "isavuconazonium",
+      "isoproterenol",
+      "isosorbide_dinitrate",
+      "itraconazole",
+      "ivabradine",
+      "kanamycin",
+      "ketamine",
+      "labetalol",
+      "lactated_ringers_solution",
+      "lefamulin",
+      "levofloxacin",
+      "levothyroxine",
+      "lidocaine",
+      "lincomycin",
+      "linezolid",
+      "linvoseltamab",
+      "liothyronine",
+      "lisinopril",
+      "lisinopril_hctz",
+      "lisocabtagene_maraleucel",
+      "lorazepam",
+      "losartan",
+      "losartan_hctz",
+      "magnesium_repletion",
+      "magnesium_sulfate",
+      "mannitol",
+      "maribavir",
+      "meropenem",
+      "meropenem_vaborbactam",
+      "methicillin",
+      "methylene_blue",
+      "methylprednisolone",
+      "metolazone",
+      "metoprolol_succinate",
+      "metoprolol_succinate_hctz",
+      "metoprolol_tartrate",
+      "metoprolol_tartrate_hctz",
+      "metrizamide",
+      "metronidazole",
+      "mezlocillin",
+      "micafungin",
+      "micafungin_posaconazole_voriconazole",
+      "midazolam",
+      "milrinone",
+      "minocycline",
+      "moexipril",
+      "morphine",
+      "mosunetuzumab",
+      "moxifloxacin",
+      "nafcillin",
+      "naloxone",
+      "nicardipine",
+      "nitric_oxide",
+      "nitrofurantoin",
+      "nitroglycerin",
+      "nitroprusside",
+      "norepinephrine",
+      "norfloxacin",
+      "nystatin",
+      "octreotide",
+      "ofloxacin",
+      "olanzapine",
+      "olmesartan",
+      "olmesartan_hctz",
+      "omadacycline",
+      "oritavancin",
+      "oseltamivir",
+      "oxacillin",
+      "oxycodone",
+      "pantoprazole",
+      "papaverine",
+      "penicillin",
+      "pentobarbital",
+      "peramivir",
+      "perindopril",
+      "perindopril_amlodipine",
+      "phentolamine",
+      "phenylephrine",
+      "phosphate_repletion",
+      "piperacillin_tazobactam",
+      "pitocin",
+      "pivampicillin",
+      "plasma_lyte",
+      "plazomicin",
+      "polymyxin_b",
+      "posaconazole",
+      "potassium_repletion",
+      "prednisolone",
+      "prednisone",
+      "procainamide",
+      "promethazine",
+      "propofol",
+      "quetiapine",
+      "quinapril",
+      "quinupristin_dalfopristin",
+      "ramipril",
+      "ramipril_amlodipine",
+      "remdesivir",
+      "remifentanil",
+      "rezafungin",
+      "ribavirin",
+      "rifampin",
+      "risperidone",
+      "rocuronium",
+      "ropivacaine",
+      "sacubitril_valsartan",
+      "siltuximab",
+      "sodium_bicarbonate",
+      "sodium_chloride",
+      "sotagliflozin",
+      "spironolactone",
+      "spironolactone_hctz",
+      "streptomycin",
+      "succinylcholine",
+      "sulbactam_durlobactam",
+      "sulfadiazine",
+      "sulfadiazine_trimethoprim",
+      "sulfisoxazole",
+      "tacrolimus",
+      "talquetamab",
+      "tarlatamab",
+      "tebentafusp",
+      "teclistamab",
+      "tedizolid",
+      "telavancin",
+      "telithromycin",
+      "telmisartan",
+      "telmisartan_amlodipine",
+      "terbutaline",
+      "tetracycline",
+      "ticarcillin",
+      "ticarcillin_clavulanate",
+      "tigecycline",
+      "tisagenlecleucel",
+      "tobramycin",
+      "tocilizumab",
+      "torsemide",
+      "tpn",
+      "trandolapril",
+      "treprostinil",
+      "trimethoprim",
+      "trimethoprim_sulfamethoxazole",
+      "valacyclovir",
+      "valganciclovir",
+      "valproate",
+      "valsartan",
+      "valsartan_amlodipine",
+      "valsartan_hctz",
+      "vancomycin",
+      "vasopressin",
+      "vecuronium",
+      "vericiguat",
+      "voriconazole",
+      "zidovudine"
+     ]
+    },
+    {
+     "name": "med_group",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "analgesia",
+      "anti_hypertensive",
+      "anticoagulation",
+      "antipsychotic",
+      "anxiolytic",
+      "car_t",
+      "cardiac",
+      "cardiac_glycoside",
+      "cms_sepsis_qualifying_antibiotics",
+      "contrast_agent",
+      "diabetes",
+      "diuretic",
+      "diuretics",
+      "endocrine",
+      "fluids_electrolytes",
+      "gastrointestinal",
+      "inhaled",
+      "other",
+      "others",
+      "paralytics",
+      "pulmonary_vasodilators_inhaled",
+      "pulmonary_vasodilators_iv",
+      "sedation",
+      "steroid",
+      "vasoactives",
+      "vasopressor"
+     ]
+    },
+    {
+     "name": "med_order_status_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "med_order_status_category",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "med_route_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "med_dose",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "med_dose_unit",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "rx_norm_code",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "med_frequency",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "prn",
+     "data_type": "INT",
+     "required": false
+    }
+   ],
+   "med_category_to_group_mapping": {
+    "acetaminophen": "analgesia",
+    "acyclovir": "cms_sepsis_qualifying_antibiotics",
+    "albumin_25": "fluids_electrolytes",
+    "albumin_5": "fluids_electrolytes",
+    "albuterol": "inhaled",
+    "alprostadil": "pulmonary_vasodilators_iv",
+    "alteplase": "other",
+    "amikacin": "cms_sepsis_qualifying_antibiotics",
+    "aminocaproic_acid": "others",
+    "aminophylline": "others",
+    "amiodarone": "cardiac",
+    "amoxicillin": "cms_sepsis_qualifying_antibiotics",
+    "amoxicillin_clavulanate": "cms_sepsis_qualifying_antibiotics",
+    "amphotericin_b": "cms_sepsis_qualifying_antibiotics",
+    "ampicillin": "cms_sepsis_qualifying_antibiotics",
+    "ampicillin_sulbactam": "cms_sepsis_qualifying_antibiotics",
+    "anakinra": "other",
+    "angiotensin": "vasoactives",
+    "anidulafungin": "cms_sepsis_qualifying_antibiotics",
+    "argatroban": "anticoagulation",
+    "atracurium": "paralytics",
+    "axicabtagene_ciloleucel": "car_t",
+    "azilsartan": "anti_hypertensive",
+    "azithromycin": "cms_sepsis_qualifying_antibiotics",
+    "aztreonam": "cms_sepsis_qualifying_antibiotics",
+    "baclofen": "others",
+    "baricitinib": "other",
+    "benazepril": "anti_hypertensive",
+    "benazepril_hctz": "anti_hypertensive",
+    "betamethasone": "steroid",
+    "bisoprolol": "anti_hypertensive",
+    "bisoprolol_hctz": "anti_hypertensive",
+    "bivalirudin": "anticoagulation",
+    "blinatumomab": "other",
+    "brexucabtagene_autoleucel": "car_t",
+    "bumetanide": [
+     "diuretics",
+     "diuretic"
+    ],
+    "bupivacaine": "others",
+    "canagliflozin": "diabetes",
+    "canagliflozin_metformin": "diabetes",
+    "candesartan": "anti_hypertensive",
+    "candesartan_hctz": "anti_hypertensive",
+    "cangrelor": "anticoagulation",
+    "captopril": "anti_hypertensive",
+    "carvedilol": "anti_hypertensive",
+    "carvedilol_cr": "anti_hypertensive",
+    "caspofungin": "cms_sepsis_qualifying_antibiotics",
+    "cefaclor": "cms_sepsis_qualifying_antibiotics",
+    "cefadroxil": "cms_sepsis_qualifying_antibiotics",
+    "cefamandole": "cms_sepsis_qualifying_antibiotics",
+    "cefazolin": "cms_sepsis_qualifying_antibiotics",
+    "cefdinir": "cms_sepsis_qualifying_antibiotics",
+    "cefepime": "cms_sepsis_qualifying_antibiotics",
+    "cefiderocol": "cms_sepsis_qualifying_antibiotics",
+    "cefixime": "cms_sepsis_qualifying_antibiotics",
+    "cefmetazole": "cms_sepsis_qualifying_antibiotics",
+    "cefonicid": "cms_sepsis_qualifying_antibiotics",
+    "cefoperazone": "cms_sepsis_qualifying_antibiotics",
+    "cefotaxime": "cms_sepsis_qualifying_antibiotics",
+    "cefotetan": "cms_sepsis_qualifying_antibiotics",
+    "cefoxitin": "cms_sepsis_qualifying_antibiotics",
+    "cefpodoxime": "cms_sepsis_qualifying_antibiotics",
+    "cefprozil": "cms_sepsis_qualifying_antibiotics",
+    "ceftaroline": "cms_sepsis_qualifying_antibiotics",
+    "ceftazidime": "cms_sepsis_qualifying_antibiotics",
+    "ceftazidime_avibactam": "cms_sepsis_qualifying_antibiotics",
+    "ceftazidime_clavulanate": "cms_sepsis_qualifying_antibiotics",
+    "ceftibuten": "cms_sepsis_qualifying_antibiotics",
+    "ceftizoxime": "cms_sepsis_qualifying_antibiotics",
+    "ceftolozane_tazobactam": "cms_sepsis_qualifying_antibiotics",
+    "ceftriaxone": "cms_sepsis_qualifying_antibiotics",
+    "cefuroxime": "cms_sepsis_qualifying_antibiotics",
+    "cephalexin": "cms_sepsis_qualifying_antibiotics",
+    "cephalothin": "cms_sepsis_qualifying_antibiotics",
+    "cephapirin": "cms_sepsis_qualifying_antibiotics",
+    "cephradine": "cms_sepsis_qualifying_antibiotics",
+    "chloramphenicol": "cms_sepsis_qualifying_antibiotics",
+    "chlorothiazide": "diuretic",
+    "chlorthalidone": "diuretic",
+    "cidofovir": "cms_sepsis_qualifying_antibiotics",
+    "ciltacabtagene_autoleucel": "car_t",
+    "cinoxacin": "cms_sepsis_qualifying_antibiotics",
+    "ciprofloxacin": "cms_sepsis_qualifying_antibiotics",
+    "cisatracurium": "paralytics",
+    "clarithromycin": "cms_sepsis_qualifying_antibiotics",
+    "clevidipine": "cardiac",
+    "clindamycin": "cms_sepsis_qualifying_antibiotics",
+    "cloxacillin": "cms_sepsis_qualifying_antibiotics",
+    "colistin": "cms_sepsis_qualifying_antibiotics",
+    "dalbavancin": "cms_sepsis_qualifying_antibiotics",
+    "dapagliflozin": "diabetes",
+    "dapagliflozin_metformin": "diabetes",
+    "dapagliflozin_saxagliptin": "diabetes",
+    "daptomycin": "cms_sepsis_qualifying_antibiotics",
+    "delafloxacin": "cms_sepsis_qualifying_antibiotics",
+    "dexamethasone": "steroid",
+    "dexmedetomidine": "sedation",
+    "dextrose_10_water": "fluids_electrolytes",
+    "dextrose_5_water": "fluids_electrolytes",
+    "dextrose_other": "others",
+    "diatrizoate": "contrast_agent",
+    "diazepam": "anxiolytic",
+    "dicloxacillin": "cms_sepsis_qualifying_antibiotics",
+    "digoxin": "cardiac_glycoside",
+    "diltiazem": "cardiac",
+    "diphenhydramine": "other",
+    "dobutamine": "vasoactives",
+    "dopamine": "vasoactives",
+    "doripenem": "cms_sepsis_qualifying_antibiotics",
+    "dornase_alfa": "other",
+    "doxycycline": "cms_sepsis_qualifying_antibiotics",
+    "elratanamab": "other",
+    "empagliflozin": "diabetes",
+    "empagliflozin_linagliptin": "diabetes",
+    "empagliflozin_metformin": "diabetes",
+    "enalapril": "anti_hypertensive",
+    "enalapril_hctz": "anti_hypertensive",
+    "epcoritamab": "other",
+    "epinephrine": [
+     "vasoactives",
+     "vasopressor"
+    ],
+    "eplerenone": "anti_hypertensive",
+    "epoprostenol": [
+     "pulmonary_vasodilators_iv",
+     "pulmonary_vasodilators_inhaled"
+    ],
+    "eprosartan": "anti_hypertensive",
+    "eptifibatide": "anticoagulation",
+    "eravacycline": "cms_sepsis_qualifying_antibiotics",
+    "ertapenem": "cms_sepsis_qualifying_antibiotics",
+    "ertugliflozin": "diabetes",
+    "erythromycin": "cms_sepsis_qualifying_antibiotics",
+    "esmolol": "cardiac",
+    "esomeprazole": "gastrointestinal",
+    "etomidate": "sedation",
+    "fentanyl": [
+     "sedation",
+     "analgesia"
+    ],
+    "fidaxomicin": "cms_sepsis_qualifying_antibiotics",
+    "fluconazole": "cms_sepsis_qualifying_antibiotics",
+    "fludrocortisone": "steroid",
+    "foscarnet": "cms_sepsis_qualifying_antibiotics",
+    "fosfomycin": "cms_sepsis_qualifying_antibiotics",
+    "fosinopril": "anti_hypertensive",
+    "furosemide": [
+     "diuretics",
+     "diuretic"
+    ],
+    "gadobenate": "contrast_agent",
+    "gadobutrol": "contrast_agent",
+    "gadodiamide": "contrast_agent",
+    "gadopentetate": "contrast_agent",
+    "gadoterate": "contrast_agent",
+    "gadoteridol": "contrast_agent",
+    "gadoxetate": "contrast_agent",
+    "ganciclovir": "cms_sepsis_qualifying_antibiotics",
+    "gatifloxacin": "cms_sepsis_qualifying_antibiotics",
+    "gentamicin": "cms_sepsis_qualifying_antibiotics",
+    "glofitamab": "other",
+    "haloperidol": "antipsychotic",
+    "heparin": "anticoagulation",
+    "hydralazine": "anti_hypertensive",
+    "hydralazine_isosorbide": "anti_hypertensive",
+    "hydrochlorothiazide": "diuretic",
+    "hydrocortisone": "steroid",
+    "hydromorphone": [
+     "sedation",
+     "analgesia"
+    ],
+    "hydroxocobalamin": "vasopressor",
+    "hypertonic_saline_20": "other",
+    "hypertonic_saline_23.4": "other",
+    "hypertonic_saline_3": "other",
+    "hypertonic_saline_7": "other",
+    "hypertonic_saline_7.5": "other",
+    "idecabtagene_vicleucel": "car_t",
+    "imipenem": "cms_sepsis_qualifying_antibiotics",
+    "imipenem_relebactam": "cms_sepsis_qualifying_antibiotics",
+    "indapamide": "diuretic",
+    "insulin": "endocrine",
+    "iobitridol": "contrast_agent",
+    "iodixanol": "contrast_agent",
+    "iohexol": "contrast_agent",
+    "iomeprol": "contrast_agent",
+    "iopamidol": "contrast_agent",
+    "ioversol": "contrast_agent",
+    "ioxaglate": "contrast_agent",
+    "ipratropium": "inhaled",
+    "irbesartan": "anti_hypertensive",
+    "irbesartan_hctz": "anti_hypertensive",
+    "isavuconazole": "cms_sepsis_qualifying_antibiotics",
+    "isavuconazonium": "cms_sepsis_qualifying_antibiotics",
+    "isoproterenol": "vasoactives",
+    "isosorbide_dinitrate": "anti_hypertensive",
+    "itraconazole": "cms_sepsis_qualifying_antibiotics",
+    "ivabradine": "other",
+    "kanamycin": "cms_sepsis_qualifying_antibiotics",
+    "ketamine": "sedation",
+    "labetalol": "cardiac",
+    "lactated_ringers_solution": "fluids_electrolytes",
+    "lefamulin": "cms_sepsis_qualifying_antibiotics",
+    "levofloxacin": "cms_sepsis_qualifying_antibiotics",
+    "levothyroxine": "endocrine",
+    "lidocaine": "cardiac",
+    "lincomycin": "cms_sepsis_qualifying_antibiotics",
+    "linezolid": "cms_sepsis_qualifying_antibiotics",
+    "linvoseltamab": "other",
+    "liothyronine": "endocrine",
+    "lisinopril": "anti_hypertensive",
+    "lisinopril_hctz": "anti_hypertensive",
+    "lisocabtagene_maraleucel": "car_t",
+    "lorazepam": [
+     "sedation",
+     "anxiolytic"
+    ],
+    "losartan": "anti_hypertensive",
+    "losartan_hctz": "anti_hypertensive",
+    "magnesium_repletion": "other",
+    "magnesium_sulfate": "others",
+    "mannitol": "other",
+    "maribavir": "cms_sepsis_qualifying_antibiotics",
+    "meropenem": "cms_sepsis_qualifying_antibiotics",
+    "meropenem_vaborbactam": "cms_sepsis_qualifying_antibiotics",
+    "methicillin": "cms_sepsis_qualifying_antibiotics",
+    "methylene_blue": "vasopressor",
+    "methylprednisolone": "steroid",
+    "metolazone": "diuretic",
+    "metoprolol_succinate": "anti_hypertensive",
+    "metoprolol_succinate_hctz": "anti_hypertensive",
+    "metoprolol_tartrate": "anti_hypertensive",
+    "metoprolol_tartrate_hctz": "anti_hypertensive",
+    "metrizamide": "contrast_agent",
+    "metronidazole": "cms_sepsis_qualifying_antibiotics",
+    "mezlocillin": "cms_sepsis_qualifying_antibiotics",
+    "micafungin": "cms_sepsis_qualifying_antibiotics",
+    "micafungin_posaconazole_voriconazole": "cms_sepsis_qualifying_antibiotics",
+    "midazolam": "sedation",
+    "milrinone": "vasoactives",
+    "minocycline": "cms_sepsis_qualifying_antibiotics",
+    "moexipril": "anti_hypertensive",
+    "morphine": [
+     "sedation",
+     "analgesia"
+    ],
+    "mosunetuzumab": "other",
+    "moxifloxacin": "cms_sepsis_qualifying_antibiotics",
+    "nafcillin": "cms_sepsis_qualifying_antibiotics",
+    "naloxone": [
+     "others",
+     "other"
+    ],
+    "nicardipine": "cardiac",
+    "nitric_oxide": "pulmonary_vasodilators_inhaled",
+    "nitrofurantoin": "cms_sepsis_qualifying_antibiotics",
+    "nitroglycerin": "cardiac",
+    "nitroprusside": "cardiac",
+    "norepinephrine": "vasoactives",
+    "norfloxacin": "cms_sepsis_qualifying_antibiotics",
+    "nystatin": "cms_sepsis_qualifying_antibiotics",
+    "octreotide": "gastrointestinal",
+    "ofloxacin": "cms_sepsis_qualifying_antibiotics",
+    "olanzapine": "antipsychotic",
+    "olmesartan": "anti_hypertensive",
+    "olmesartan_hctz": "anti_hypertensive",
+    "omadacycline": "cms_sepsis_qualifying_antibiotics",
+    "oritavancin": "cms_sepsis_qualifying_antibiotics",
+    "oseltamivir": "cms_sepsis_qualifying_antibiotics",
+    "oxacillin": "cms_sepsis_qualifying_antibiotics",
+    "oxycodone": "analgesia",
+    "pantoprazole": "gastrointestinal",
+    "papaverine": "cardiac",
+    "penicillin": "cms_sepsis_qualifying_antibiotics",
+    "pentobarbital": "sedation",
+    "peramivir": "cms_sepsis_qualifying_antibiotics",
+    "perindopril": "anti_hypertensive",
+    "perindopril_amlodipine": "anti_hypertensive",
+    "phentolamine": "others",
+    "phenylephrine": "vasoactives",
+    "phosphate_repletion": "other",
+    "piperacillin_tazobactam": "cms_sepsis_qualifying_antibiotics",
+    "pitocin": "others",
+    "pivampicillin": "cms_sepsis_qualifying_antibiotics",
+    "plasma_lyte": "fluids_electrolytes",
+    "plazomicin": "cms_sepsis_qualifying_antibiotics",
+    "polymyxin_b": "cms_sepsis_qualifying_antibiotics",
+    "posaconazole": "cms_sepsis_qualifying_antibiotics",
+    "potassium_repletion": "other",
+    "prednisolone": "steroid",
+    "prednisone": "steroid",
+    "procainamide": "cardiac",
+    "promethazine": "other",
+    "propofol": "sedation",
+    "quetiapine": "antipsychotic",
+    "quinapril": "anti_hypertensive",
+    "quinupristin_dalfopristin": "cms_sepsis_qualifying_antibiotics",
+    "ramipril": "anti_hypertensive",
+    "ramipril_amlodipine": "anti_hypertensive",
+    "remdesivir": "cms_sepsis_qualifying_antibiotics",
+    "remifentanil": "sedation",
+    "rezafungin": "cms_sepsis_qualifying_antibiotics",
+    "ribavirin": "cms_sepsis_qualifying_antibiotics",
+    "rifampin": "cms_sepsis_qualifying_antibiotics",
+    "risperidone": "antipsychotic",
+    "rocuronium": "paralytics",
+    "ropivacaine": "others",
+    "sacubitril_valsartan": "anti_hypertensive",
+    "siltuximab": "other",
+    "sodium_bicarbonate": "fluids_electrolytes",
+    "sodium_chloride": "fluids_electrolytes",
+    "sotagliflozin": "diabetes",
+    "spironolactone": "anti_hypertensive",
+    "spironolactone_hctz": "anti_hypertensive",
+    "streptomycin": "cms_sepsis_qualifying_antibiotics",
+    "succinylcholine": "paralytics",
+    "sulbactam_durlobactam": "cms_sepsis_qualifying_antibiotics",
+    "sulfadiazine": "cms_sepsis_qualifying_antibiotics",
+    "sulfadiazine_trimethoprim": "cms_sepsis_qualifying_antibiotics",
+    "sulfisoxazole": "cms_sepsis_qualifying_antibiotics",
+    "tacrolimus": "others",
+    "talquetamab": "other",
+    "tarlatamab": "other",
+    "tebentafusp": "other",
+    "teclistamab": "other",
+    "tedizolid": "cms_sepsis_qualifying_antibiotics",
+    "telavancin": "cms_sepsis_qualifying_antibiotics",
+    "telithromycin": "cms_sepsis_qualifying_antibiotics",
+    "telmisartan": "anti_hypertensive",
+    "telmisartan_amlodipine": "anti_hypertensive",
+    "terbutaline": [
+     "inhaled",
+     "others"
+    ],
+    "tetracycline": "cms_sepsis_qualifying_antibiotics",
+    "ticarcillin": "cms_sepsis_qualifying_antibiotics",
+    "ticarcillin_clavulanate": "cms_sepsis_qualifying_antibiotics",
+    "tigecycline": "cms_sepsis_qualifying_antibiotics",
+    "tisagenlecleucel": "car_t",
+    "tobramycin": "cms_sepsis_qualifying_antibiotics",
+    "tocilizumab": "other",
+    "torsemide": [
+     "diuretics",
+     "diuretic"
+    ],
+    "tpn": "fluids_electrolytes",
+    "trandolapril": "anti_hypertensive",
+    "treprostinil": "pulmonary_vasodilators_iv",
+    "trimethoprim": "cms_sepsis_qualifying_antibiotics",
+    "trimethoprim_sulfamethoxazole": "cms_sepsis_qualifying_antibiotics",
+    "valacyclovir": "cms_sepsis_qualifying_antibiotics",
+    "valganciclovir": "cms_sepsis_qualifying_antibiotics",
+    "valproate": "other",
+    "valsartan": "anti_hypertensive",
+    "valsartan_amlodipine": "anti_hypertensive",
+    "valsartan_hctz": "anti_hypertensive",
+    "vancomycin": "cms_sepsis_qualifying_antibiotics",
+    "vasopressin": "vasoactives",
+    "vecuronium": "paralytics",
+    "vericiguat": "other",
+    "voriconazole": "cms_sepsis_qualifying_antibiotics",
+    "zidovudine": "others"
+   }
+  },
+  "microbiology_culture": {
+   "columns": [
+    {
+     "name": "patient_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "order_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "organism_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "order_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "collect_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "result_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "fluid_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "fluid_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "blood_buffy",
+      "bone_cortex",
+      "bone_marrow",
+      "brain",
+      "cardiac",
+      "catheter_tip",
+      "central_nervous_system",
+      "ears",
+      "esophagus",
+      "eyes",
+      "fallopians_uterus_cervix",
+      "feces_stool",
+      "gallbladder_billary_pancreas",
+      "gastrointestinal_tract",
+      "genital_area",
+      "genito_urinary_tract",
+      "joints",
+      "kidneys_renal_pelvis_ureters_bladder",
+      "large_intestine",
+      "larynx",
+      "lips",
+      "liver",
+      "lymph_nodes",
+      "meninges_csf",
+      "muscle",
+      "nasopharynx_upperairway",
+      "oropharynx_tongue_oralcavity",
+      "other_unspecified",
+      "peritoneum",
+      "pleural_cavity_fluid",
+      "prostate",
+      "respiratory_tract",
+      "respiratory_tract_lower",
+      "sinuses",
+      "skin_disseminated_multiple_sites",
+      "skin_rash_pustules_abscesses",
+      "skin_unspecified",
+      "small_intestine",
+      "spinal_cord",
+      "spleen",
+      "stomach",
+      "testes",
+      "vagina",
+      "woundsite"
+     ]
+    },
+    {
+     "name": "method_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "method_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "culture",
+      "gram_stain",
+      "smear"
+     ]
+    },
+    {
+     "name": "organism_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "organism_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "abiotrophia_defectiva",
+      "achromobacter_sp",
+      "achromobacter_xylosoxidans",
+      "acidaminococcus_sp",
+      "acinetobacter_baumannii",
+      "acinetobacter_johnsonii",
+      "acinetobacter_junii",
+      "acinetobacter_lwoffii",
+      "acinetobacter_pittii",
+      "acinetobacter_radioresistens",
+      "acinetobacter_sp",
+      "acinetobacter_ursingii",
+      "acremonium_sp",
+      "actinomyces_europaeus",
+      "actinomyces_meyeri",
+      "actinomyces_naeslundii",
+      "actinomyces_neuii",
+      "actinomyces_odontolyticus",
+      "actinomyces_radingae",
+      "actinomyces_sp",
+      "actinomyces_turicensis",
+      "actinomyces_viscosus",
+      "actinotignum_schaalii",
+      "actinotignum_sp",
+      "aerococcus_christensenii",
+      "aerococcus_sanguinicola",
+      "aerococcus_sp",
+      "aerococcus_urinae",
+      "aerococcus_viridans",
+      "aeromonas_caviae",
+      "aeromonas_hydrophila",
+      "aeromonas_sobria",
+      "aeromonas_sp",
+      "aggregatibacter_actinomycetemcomitans",
+      "aggregatibacter_aphrophilus",
+      "aggregatibacter_segnis",
+      "agrobacterium_radiobacter",
+      "alcaligenes_faecalis",
+      "alcaligenes_xylosoxidans",
+      "alistipes_finegoldii",
+      "alistipes_onderdonkii",
+      "alloiococcus_otitis",
+      "alloiococcus_sp",
+      "alternaria_alternata",
+      "alternaria_sp",
+      "anaerobic_sp",
+      "anaerococcus_sp",
+      "arcanobacterium_haemolyticum",
+      "arthrobacter_cumminsii",
+      "arthrobacter_sp",
+      "arthrographis_sp",
+      "aspergillus_flavus",
+      "aspergillus_fumigatus",
+      "aspergillus_nidulans",
+      "aspergillus_niger",
+      "aspergillus_ochraceus",
+      "aspergillus_sp",
+      "aspergillus_sydowii",
+      "aspergillus_terreus",
+      "aspergillus_versicolor",
+      "atopobium_parvulum",
+      "atopobium_sp",
+      "atopobium_vaginae",
+      "aureobasidium_sp",
+      "bacillus_cereus",
+      "bacillus_licheniformis",
+      "bacillus_megaterium",
+      "bacillus_simplex",
+      "bacillus_sp",
+      "bacillus_subtilis",
+      "bacteria_other",
+      "bacteroides_caccae",
+      "bacteroides_capillosus",
+      "bacteroides_eggerthii",
+      "bacteroides_faecis",
+      "bacteroides_fragilis",
+      "bacteroides_ovatus",
+      "bacteroides_pyogenes",
+      "bacteroides_sp",
+      "bacteroides_stercoris",
+      "bacteroides_thetaiotaomicron",
+      "bacteroides_uniformis",
+      "bacteroides_vulgatus",
+      "bacteroides_xylanisolvens",
+      "bifidobacterium_sp",
+      "bilophila_wadsworthia",
+      "blastomyces_dermatitidis",
+      "blastomyces_sp",
+      "bordetella_bronchiseptica",
+      "bordetella_hinzii",
+      "bordetella_sp",
+      "bordetella_trematum",
+      "brevibacillus_sp",
+      "brevibacterium_casei",
+      "brevibacterium_luteolum",
+      "brevibacterium_sp",
+      "brevundimonas_diminuta",
+      "brevundimonas_sp",
+      "brevundimonas_vesicularis",
+      "brucella_intermedia",
+      "burkholderia_cepacia",
+      "burkholderia_gladioli",
+      "burkholderia_sp",
+      "campylobacter_coli",
+      "campylobacter_jejuni",
+      "campylobacter_sp",
+      "campylobacter_ureolyticus",
+      "candida_albicans",
+      "candida_auris",
+      "candida_colliculosa",
+      "candida_dubliniensis",
+      "candida_famata",
+      "candida_fermentati",
+      "candida_glabrata",
+      "candida_guilliermondii",
+      "candida_haemulonii",
+      "candida_intermedia",
+      "candida_kefyr",
+      "candida_krusei",
+      "candida_lambica",
+      "candida_lipolytica",
+      "candida_lusitaniae",
+      "candida_nivariensis",
+      "candida_orthopsilosis",
+      "candida_parapsilosis",
+      "candida_pararugosa",
+      "candida_pelliculosa",
+      "candida_pulcherrima",
+      "candida_rugosa",
+      "candida_sp",
+      "candida_tropicalis",
+      "candida_utilis",
+      "capnocytophaga_gingivalis",
+      "capnocytophaga_sp",
+      "cardiobacterium_hominis",
+      "cardiobacterium_sp",
+      "cellulosimicrobium_cellulans",
+      "chaetomium_sp",
+      "chryseobacterium_indologenes",
+      "chryseobacterium_sp",
+      "citrobacter_amalonaticus",
+      "citrobacter_farmeri",
+      "citrobacter_freundii",
+      "citrobacter_koseri",
+      "citrobacter_sp",
+      "cladosporium_sp",
+      "clostridioides_difficile",
+      "clostridium_bifermentans",
+      "clostridium_butyricum",
+      "clostridium_cadaveris",
+      "clostridium_clostridioforme",
+      "clostridium_innocuum",
+      "clostridium_paraputrificum",
+      "clostridium_perfringens",
+      "clostridium_ramosum",
+      "clostridium_septicum",
+      "clostridium_sordellii",
+      "clostridium_sp",
+      "clostridium_sporogenes",
+      "clostridium_tertium",
+      "cokeromyces_recurvatus",
+      "collinsella_aerofaciens",
+      "comamonas_testosteroni",
+      "corynebacterium_accolens",
+      "corynebacterium_afermentans",
+      "corynebacterium_amycolatum",
+      "corynebacterium_aurimucosum",
+      "corynebacterium_bovis",
+      "corynebacterium_coyleae",
+      "corynebacterium_diptheriae",
+      "corynebacterium_durum",
+      "corynebacterium_freneyi",
+      "corynebacterium_glucuronolyticum",
+      "corynebacterium_imitans",
+      "corynebacterium_jeikeium",
+      "corynebacterium_macginleyi",
+      "corynebacterium_propinquum",
+      "corynebacterium_pseudodiphtheriticum",
+      "corynebacterium_simulans",
+      "corynebacterium_sp",
+      "corynebacterium_striatum",
+      "corynebacterium_tuberculostearicum",
+      "corynebacterium_urealyticum",
+      "cronobacter_malonaticus",
+      "cronobacter_sakazakii",
+      "cronobacter_sp",
+      "cryptococcus_albidus",
+      "cryptococcus_neoformans",
+      "cunninghamella_sp",
+      "cupriavidus_pauculus",
+      "curtobacterium_sp",
+      "curvularia_sp",
+      "cutibacterium_acnes",
+      "cutibacterium_avidum",
+      "delftia_acidovorans",
+      "dematiaceous_sp",
+      "dermabacter_hominis",
+      "dermacoccus_nishinomiyaensis",
+      "desulfovibrio_sp",
+      "dialister_pneumosintes",
+      "dialister_sp",
+      "dietzia_cinnamea",
+      "dietzia_sp",
+      "dolosigranulum_pigrum",
+      "edwardsiella_tarda",
+      "eggerthella_lenta",
+      "eggerthella_lentum",
+      "eggerthella_sp",
+      "eggerthia_catenaformis",
+      "eikenella_corrodens",
+      "elizabethkingia_anophelis",
+      "elizabethkingia_meningoseptica",
+      "elizabethkingia_sp",
+      "enterobacter_aerogenes",
+      "enterobacter_amnigenus",
+      "enterobacter_cancerogenus",
+      "enterobacter_cloacae",
+      "enterobacter_sp",
+      "enterococcus_avium",
+      "enterococcus_casseliflavus",
+      "enterococcus_durans",
+      "enterococcus_faecalis",
+      "enterococcus_faecium",
+      "enterococcus_gallinarum",
+      "enterococcus_hirae",
+      "enterococcus_raffinosus",
+      "enterococcus_saccharolyticus",
+      "enterococcus_sp",
+      "epicoccum_sp",
+      "erysipelothrix_rhusiopathiae",
+      "escherichia_coli",
+      "escherichia_hermannii",
+      "escherichia_sp",
+      "eubacterium_callanderi",
+      "eubacterium_sp",
+      "ewingella_americana",
+      "exiguobacterium_acetylicum",
+      "exophiala_dermatitidis",
+      "facklamia_hominis",
+      "facklamia_sp",
+      "finegoldia_magna",
+      "francisella_tularensis",
+      "fungus_other",
+      "fusarium_proliferatum",
+      "fusarium_solani",
+      "fusarium_sp",
+      "fusobacterium_gonidiaformans",
+      "fusobacterium_necrophorum",
+      "fusobacterium_nucleatum",
+      "fusobacterium_sp",
+      "gardnerella_vaginalis",
+      "gemella_morbillorum",
+      "gemella_sp",
+      "geotrichum_sp",
+      "globicatella_sanguinis",
+      "gordonia_bronchialis",
+      "gordonia_sp",
+      "gram_negative_diplococci",
+      "gram_negative_rod",
+      "gram_positive_cocci",
+      "gram_positive_rod",
+      "granulicatella_adiacens",
+      "granulicatella_elegans",
+      "haemophilus_haemolyticus",
+      "haemophilus_influenzae",
+      "haemophilus_parainfluenzae",
+      "haemophilus_sp",
+      "hafnia_alvei",
+      "hafnia_sp",
+      "histoplasma_capsulatum",
+      "kingella_denitrificans",
+      "klebsiella_aerogenes",
+      "klebsiella_oxytoca",
+      "klebsiella_pneumoniae",
+      "klebsiella_sp",
+      "klebsiella_variicola",
+      "kloeckera_sp",
+      "kluyvera_sp",
+      "kocuria_palustris",
+      "kocuria_sp",
+      "kodamaea_ohmeri",
+      "lactobacillus_acidophilus",
+      "lactobacillus_fermentum",
+      "lactobacillus_sp",
+      "lactococcus_sp",
+      "leclercia_adecarboxylata",
+      "legionella_bozemanae",
+      "legionella_dumoffii",
+      "legionella_feeleii",
+      "legionella_pneumophila",
+      "legionella_sp",
+      "lelliottia_amigena",
+      "leptotrichia_buccalis",
+      "leuconostoc_sp",
+      "lichtheimia_sp",
+      "listeria_monocytogenes",
+      "lysinibacillus_fusiformis",
+      "lysinibacillus_sp",
+      "malassezia_furfur",
+      "malassezia_pachydermatis",
+      "microbacterium_flavescens",
+      "microbacterium_sp",
+      "micrococcus_luteus",
+      "micrococcus_sp",
+      "microsporum_gypseum",
+      "microsporum_sp",
+      "moraxella_catarrhalis",
+      "moraxella_nonliquefaciens",
+      "moraxella_osloensis",
+      "moraxella_sp",
+      "morganella_morganii",
+      "morganella_sp",
+      "mucor_circinelloides",
+      "mucor_sp",
+      "mycobacterium_abscessus",
+      "mycobacterium_avium",
+      "mycobacterium_chelonae",
+      "mycobacterium_farcinogenes",
+      "mycobacterium_fortuitum",
+      "mycobacterium_gordonae",
+      "mycobacterium_kansasii",
+      "mycobacterium_kubicae",
+      "mycobacterium_lentiflavum",
+      "mycobacterium_llatzerense",
+      "mycobacterium_malmoense",
+      "mycobacterium_marinum",
+      "mycobacterium_mucogenicum",
+      "mycobacterium_neoaurum",
+      "mycobacterium_paraffinicum",
+      "mycobacterium_scrofulaceum",
+      "mycobacterium_szulgai",
+      "mycobacterium_tuberculosis",
+      "mycobacterium_xenopi",
+      "mycoplasma_hominis",
+      "mycoplasma_sp",
+      "myroides_sp",
+      "neisseria_gonorrhoeae",
+      "neisseria_meningitidis",
+      "neisseria_mucosa",
+      "neisseria_sp",
+      "neisseria_subflava",
+      "no_growth",
+      "nocardia_abscessus",
+      "nocardia_brasiliensis",
+      "nocardia_cyriacigeorgica",
+      "nocardia_farcinica",
+      "nocardia_nova",
+      "nocardia_sp",
+      "nocardia_thailandica",
+      "nocardia_veterana",
+      "nocardia_wallacei",
+      "ochraconis_sp",
+      "ochrobactrum_anthropi",
+      "ochrobactrum_intermedium",
+      "ochrobactrum_sp",
+      "odoribacter_splanchnicus",
+      "oligella_ureolytica",
+      "oligella_urethralis",
+      "paecilomyces_lilacinus",
+      "paecilomyces_sp",
+      "paenibacillus_sp",
+      "pandoraea_sp",
+      "pantoea_agglomerans",
+      "pantoea_sp",
+      "parabacteroides_distasonis",
+      "parabacteroides_merdae",
+      "parvimonas_micra",
+      "pasteurella_canis",
+      "pasteurella_multocida",
+      "pasteurella_sp",
+      "pediococcus_acidilactici",
+      "penicillium_sp",
+      "peptoniphilus_assacharolyticus",
+      "peptoniphilus_harei",
+      "peptoniphilus_sp",
+      "peptostreptococcus_anaerobius",
+      "peptostreptococcus_sp",
+      "pithomyces_sp",
+      "plasmodium_falciparum",
+      "plasmodium_sp",
+      "plesiomonas_shigelloides",
+      "pluralibacter_gergoviae",
+      "porphyromonas_asaccharolytica",
+      "porphyromonas_sp",
+      "prevotella_bivia",
+      "prevotella_buccae",
+      "prevotella_denticola",
+      "prevotella_disiens",
+      "prevotella_intermedia",
+      "prevotella_melaninogenica",
+      "prevotella_nigrescens",
+      "prevotella_oralis",
+      "prevotella_oris",
+      "prevotella_sp",
+      "propionibacterium_acnes",
+      "propionibacterium_avidum",
+      "propionibacterium_granulosum",
+      "propionibacterium_sp",
+      "proteus_mirabilis",
+      "proteus_penneri",
+      "proteus_sp",
+      "proteus_vulgaris",
+      "providencia_alcalifaciens",
+      "providencia_rettgeri",
+      "providencia_sp",
+      "providencia_stuartii",
+      "pseudallescheria_boydii",
+      "pseudoglutamicibacter_cumminsii",
+      "pseudomonas_aeruginosa",
+      "pseudomonas_alcaligenes",
+      "pseudomonas_fluorescens",
+      "pseudomonas_luteola",
+      "pseudomonas_mendocina",
+      "pseudomonas_oryzihabitans",
+      "pseudomonas_putida",
+      "pseudomonas_sp",
+      "pseudomonas_stutzeri",
+      "psychrobacter_phenylpyruvicus",
+      "psychrobacter_sp",
+      "purpureocillium_lilacinum",
+      "rahnella_aquatilis",
+      "rahnella_sp",
+      "ralstonia_mannitolilytica",
+      "ralstonia_pickettii",
+      "ralstonia_sp",
+      "raoultella_ornithinolytica",
+      "raoultella_planticola",
+      "raoultella_sp",
+      "rhinocladiella_sp",
+      "rhizobium_radiobacter",
+      "rhizobium_sp",
+      "rhizomucor_pusillus",
+      "rhizomucor_sp",
+      "rhizopus_sp",
+      "rhodococcus_sp",
+      "rhodotorula_mucilaginosa",
+      "rhodotorula_sp",
+      "roseomonas_sp",
+      "rothia_dentocariosa",
+      "rothia_mucilaginosa",
+      "rothia_sp",
+      "saccharomyces_cerevisiae",
+      "saccharomyces_sp",
+      "salmonella_enterica",
+      "salmonella_enteritidis",
+      "salmonella_paratyphi",
+      "salmonella_sp",
+      "saprochaete_capitata",
+      "saprochaete_sp",
+      "scedosporium_apiospermum",
+      "scopulariopsis_brevicaulis",
+      "scopulariopsis_sp",
+      "serratia_fonticola",
+      "serratia_liquefaciens",
+      "serratia_marcescens",
+      "serratia_odorifera",
+      "serratia_rubidaea",
+      "serratia_sp",
+      "shewanella_putrefaciens",
+      "shewanella_sp",
+      "shigella_sonnei",
+      "slackia_exigua",
+      "sphingomonas_paucimobilis",
+      "sphingomonas_sp",
+      "sporobolomyces_salmonicolor",
+      "staphylococcus_aureus",
+      "staphylococcus_auricularis",
+      "staphylococcus_capitis",
+      "staphylococcus_caprae",
+      "staphylococcus_carnosus",
+      "staphylococcus_coagneg",
+      "staphylococcus_cohnii",
+      "staphylococcus_epidermidis",
+      "staphylococcus_haemolyticus",
+      "staphylococcus_hominis",
+      "staphylococcus_lugdunensis",
+      "staphylococcus_pasteuri",
+      "staphylococcus_pettenkoferi",
+      "staphylococcus_pseudintermedius",
+      "staphylococcus_saccharolyticus",
+      "staphylococcus_saprophyticus",
+      "staphylococcus_schleiferi",
+      "staphylococcus_sciuri",
+      "staphylococcus_simulans",
+      "staphylococcus_sp",
+      "staphylococcus_warneri",
+      "staphylococcus_xylosus",
+      "stenotrophomonas_maltophilia",
+      "stenotrophomonas_rhizophila",
+      "stenotrophomonas_sp",
+      "streptococcus_agalactiae",
+      "streptococcus_alphahemolytic",
+      "streptococcus_anginosus",
+      "streptococcus_bovis",
+      "streptococcus_canis",
+      "streptococcus_constellatus",
+      "streptococcus_cristatus",
+      "streptococcus_dysgalactiae",
+      "streptococcus_equinus",
+      "streptococcus_gallolyticus",
+      "streptococcus_gordonii",
+      "streptococcus_infantarius",
+      "streptococcus_intermedius",
+      "streptococcus_mitis",
+      "streptococcus_mutans",
+      "streptococcus_nonhemolytic",
+      "streptococcus_parasanguinis",
+      "streptococcus_pneumoniae",
+      "streptococcus_pseudoporcinus",
+      "streptococcus_pyogenes",
+      "streptococcus_salivarius",
+      "streptococcus_sanguinis",
+      "streptococcus_sp",
+      "streptococcus_viridans",
+      "streptomyces_griseus",
+      "streptomyces_sp",
+      "sutterella_sp",
+      "syncephalastrum_sp",
+      "teichospora_sp",
+      "tissierella_praeacuta",
+      "trichoderma_sp",
+      "trichophyton_rubrum",
+      "trichophyton_tonsurans",
+      "trichosporon_asahii",
+      "trichosporon_sp",
+      "trueperella_bernardiae",
+      "trueperella_sp",
+      "tuberculosis_nos_afb_kochbacillus",
+      "turicella_otitidis",
+      "vagococcus_fluvialis",
+      "veillonella_sp",
+      "verticillium_sp",
+      "vibrio_sp",
+      "virus_other",
+      "weeksella_sp",
+      "weeksella_virosa",
+      "weissella_confusa",
+      "weissella_sp",
+      "xanthomonas_sp",
+      "yeast",
+      "zygomycete_sp"
+     ]
+    },
+    {
+     "name": "organism_group",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "acinetobacter",
+      "adenovirus",
+      "agrobacterium_radiobacter",
+      "alcaligenes_xylosoxidans",
+      "amebiasis",
+      "anaerobes_wo_bacteroides_clostridium",
+      "aspergillus_nos",
+      "aspergillus_flavus",
+      "aspergillus_fumigatus",
+      "aspergillus_niger",
+      "bacillus",
+      "bacteria_other",
+      "bacteroides",
+      "borrelia",
+      "branhamelia_moraxella_catarrhalis",
+      "campylobacter",
+      "candida_albicans",
+      "candida_krusei",
+      "candida_nos",
+      "candida_parapsilosis",
+      "candida_tropicalis",
+      "chlamydia",
+      "citrobacter",
+      "clostridium_difficile",
+      "clostridium_wo_difficile",
+      "corynebacterium",
+      "coxiella",
+      "cryptococcus",
+      "cryptosporidium",
+      "cytomegalovirus",
+      "echinoco_ocalcyst",
+      "enterobacter",
+      "enterococcus",
+      "enterovirus",
+      "epstein_barr_virus",
+      "escherichia",
+      "flavimonas_oryzihabitans",
+      "flavobacterium",
+      "fungus_other",
+      "fusarium",
+      "fusobacterium_nucleatum",
+      "giardia",
+      "gram_negative_diplococci",
+      "gram_negative_rod",
+      "gram_positive_cocci",
+      "gram_positive_rod",
+      "haemophilus",
+      "helicobacter_pylori",
+      "hepatitis_a",
+      "hepatitis_b",
+      "hepatitis_c",
+      "herpes_simplex",
+      "herpes_zoster",
+      "hhv_6",
+      "hiv_htlv",
+      "influenza",
+      "klebsiella",
+      "lactobacillus",
+      "legionella",
+      "leptospira",
+      "leptotrichia_buccalis",
+      "leuconostoc",
+      "listeria",
+      "measles",
+      "methylobacterium",
+      "micrococcus",
+      "mucormycosis_zygomycetes_rhizopus",
+      "mumps",
+      "mycobacteria_avium_bovium_haemophilum_intercelluare",
+      "mycobacterium_other",
+      "mycoplasma",
+      "neisseria",
+      "nocardia",
+      "no_growth",
+      "other_organism",
+      "papovavirus",
+      "parainfluenza",
+      "pharyngeal_respiratory_flora",
+      "pneumocystis",
+      "polyomavirus",
+      "propionbacterium",
+      "protozoal_other",
+      "pseudomonas_burkholderia_cepacia",
+      "pseudomonas_stenotrophomonas_xanthomonas_maltophilia",
+      "pseudomonas_wo_cepacia_maltophilia",
+      "respiratory_syncytial_virus",
+      "rhinovirus",
+      "rhodococcus",
+      "rickettsia",
+      "rotavirus",
+      "rubella",
+      "salmonella",
+      "serratia_marcescens",
+      "shigella",
+      "staphylococcus_coag_neg",
+      "staphylococcus_coag_pos",
+      "staphylococcus_nos",
+      "stomatococcus_mucilaginosis",
+      "streptococcus",
+      "torulopsis_galbrata",
+      "toxoplasma",
+      "treponema",
+      "trichomonas",
+      "tuberculosis",
+      "tuberculosis_nos_afb_kochbacillus",
+      "vibrio",
+      "viral_other",
+      "yeast"
+     ]
+    },
+    {
+     "name": "lab_loinc_code",
+     "data_type": "VARCHAR",
+     "required": false
+    }
+   ]
+  },
+  "microbiology_nonculture": {
+   "columns": [
+    {
+     "name": "patient_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "result_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "collect_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "order_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "fluid_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "fluid_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "blood_buffy",
+      "bone_cortex",
+      "bone_marrow",
+      "brain",
+      "cardiac",
+      "catheter_tip",
+      "central_nervous_system",
+      "ears",
+      "esophagus",
+      "eyes",
+      "fallopians_uterus_cervix",
+      "feces_stool",
+      "gallbladder_billary_pancreas",
+      "gastrointestinal_tract",
+      "genital_area",
+      "genito_urinary_tract",
+      "joints",
+      "kidneys_renal_pelvis_ureters_bladder",
+      "large_intestine",
+      "larynx",
+      "lips",
+      "liver",
+      "lymph_nodes",
+      "meninges_csf",
+      "muscle",
+      "nasopharynx_upperairway",
+      "oropharynx_tongue_oralcavity",
+      "other_unspecified",
+      "peritoneum",
+      "pleural_cavity_fluid",
+      "prostate",
+      "respiratory_tract",
+      "respiratory_tract_lower",
+      "sinuses",
+      "skin_disseminated_multiple_sites",
+      "skin_rash_pustules_abscesses",
+      "skin_unspecified",
+      "small_intestine",
+      "spinal_cord",
+      "spleen",
+      "stomach",
+      "testes",
+      "vagina",
+      "woundsite"
+     ]
+    },
+    {
+     "name": "method_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "method_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "pcr"
+     ]
+    },
+    {
+     "name": "micro_order_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "organism_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "adenovirus",
+      "bordetella_parapertussis",
+      "bordetella_pertussis",
+      "chlamydia_pneumoniae",
+      "clostridium_difficile",
+      "coronavirus_229e",
+      "coronavirus_hku1",
+      "coronavirus_nl63",
+      "coronavirus_oc43",
+      "human_metapneumovirus",
+      "human_rhinovirus_enterovirus",
+      "influenza_a",
+      "influenza_a_h1",
+      "influenza_a_h1_2009",
+      "influenza_a_h3",
+      "influenza_b",
+      "mycoplasma_pneumoniae",
+      "parainfluenza_1",
+      "parainfluenza_2",
+      "parainfluenza_3",
+      "parainfluenza_4",
+      "pneumocystis_jirovecii",
+      "respiratory_syncytial_virus",
+      "sars_cov2"
+     ]
+    },
+    {
+     "name": "organism_group",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "adenovirus",
+      "bacteria_other",
+      "chlamydia",
+      "clostridium_difficile",
+      "influenza",
+      "mycoplasma",
+      "parainfluenza",
+      "pneumocystis",
+      "respiratory_syncytial_virus",
+      "rhinovirus",
+      "viral_other"
+     ]
+    },
+    {
+     "name": "result_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "result_category",
+     "data_type": "VARCHAR",
+     "required": false,
+     "permissible_values": [
+      "detected",
+      "not_detected",
+      "indeterminate"
+     ]
+    },
+    {
+     "name": "reference_low",
+     "data_type": "DOUBLE",
+     "required": false
+    },
+    {
+     "name": "reference_high",
+     "data_type": "DOUBLE",
+     "required": false
+    },
+    {
+     "name": "result_unit",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "lab_loinc_code",
+     "data_type": "VARCHAR",
+     "required": false
+    }
+   ],
+   "organism_category_to_group_mapping": {
+    "adenovirus": "adenovirus",
+    "bordetella_parapertussis": "bacteria_other",
+    "bordetella_pertussis": "bacteria_other",
+    "chlamydia_pneumoniae": "chlamydia",
+    "clostridium_difficile": "clostridium_difficile",
+    "coronavirus_229e": "viral_other",
+    "coronavirus_hku1": "viral_other",
+    "coronavirus_nl63": "viral_other",
+    "coronavirus_oc43": "viral_other",
+    "human_metapneumovirus": "viral_other",
+    "human_rhinovirus_enterovirus": "rhinovirus",
+    "influenza_a": "influenza",
+    "influenza_a_h1": "influenza",
+    "influenza_a_h1_2009": "influenza",
+    "influenza_a_h3": "influenza",
+    "influenza_b": "influenza",
+    "mycoplasma_pneumoniae": "mycoplasma",
+    "parainfluenza_1": "parainfluenza",
+    "parainfluenza_2": "parainfluenza",
+    "parainfluenza_3": "parainfluenza",
+    "parainfluenza_4": "parainfluenza",
+    "pneumocystis_jirovecii": "pneumocystis",
+    "respiratory_syncytial_virus": "respiratory_syncytial_virus",
+    "sars_cov2": "viral_other"
+   }
+  },
+  "microbiology_susceptibility": {
+   "columns": [
+    {
+     "name": "organism_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "antimicrobial_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "antimicrobial_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "actinomycin_d",
+      "acyclovir",
+      "amikacin",
+      "amoxicillin",
+      "amoxicillin_clavulanate",
+      "amphotericin_b",
+      "ampicillin",
+      "ampicillin_sulbactam",
+      "anidulafungin",
+      "azithromycin",
+      "aztreonam",
+      "baloxavir_marboxil",
+      "bedaquiline",
+      "beta_lactams",
+      "capreomycin",
+      "caspofungin",
+      "cefaclor",
+      "cefadroxil",
+      "cefamandole",
+      "cefazolin",
+      "cefdinir",
+      "cefditoren",
+      "cefepime",
+      "cefiderocol",
+      "cefixime",
+      "cefmetazole",
+      "cefonicid",
+      "cefoperazone",
+      "cefotaxime",
+      "cefotetan",
+      "cefoxitin",
+      "cefpodoxime",
+      "cefprozil",
+      "ceftaroline",
+      "ceftazidime",
+      "ceftazidime_avibactam",
+      "ceftazidime_clavulanate",
+      "ceftibuten",
+      "ceftizoxime",
+      "ceftolozane_tazobactam",
+      "ceftriaxone",
+      "cefuroxime",
+      "cephalexin",
+      "cephalothin",
+      "cephapirin",
+      "cephradine",
+      "chloramphenicol",
+      "ciclopirox",
+      "cidofovir",
+      "cinoxacin",
+      "ciprofloxacin",
+      "clarithromycin",
+      "clindamycin",
+      "clofazimine",
+      "clotrimazole",
+      "cloxacillin",
+      "colistin",
+      "cycloserine",
+      "dalbavancin",
+      "daptomycin",
+      "delamanid",
+      "dicloxacillin",
+      "dolutegravir",
+      "doripenem",
+      "doxycycline",
+      "efavirenz",
+      "efinaconazole",
+      "emtricitabine",
+      "entecavir",
+      "ertapenem",
+      "erythromycin",
+      "ethambutol",
+      "ethionamide",
+      "famciclovir",
+      "fidaxomicin",
+      "fluconazole",
+      "flucytosine",
+      "foscarnet",
+      "fosfomycin",
+      "fosmidomycin",
+      "fusidic_acid",
+      "ganciclovir",
+      "gatifloxacin",
+      "gentamicin",
+      "glecaprevir",
+      "griseofulvin",
+      "imipenem",
+      "isavuconazole",
+      "isavuconazonium",
+      "isoniazid",
+      "itraconazole",
+      "kanamycin",
+      "ketoconazole",
+      "lamivudine",
+      "ledipasvir",
+      "levofloxacin",
+      "lincomycin",
+      "linezolid",
+      "lopinavir",
+      "macrolides",
+      "meropenem",
+      "meropenem_vaborbactam",
+      "methicillin",
+      "metronidazole",
+      "mezlocillin",
+      "micafungin",
+      "miconazole",
+      "minocycline",
+      "moxalactam",
+      "moxifloxacin",
+      "mupirocin",
+      "nafcillin",
+      "nitrofurantoin",
+      "norfloxacin",
+      "nystatin",
+      "ofloxacin",
+      "oritavancin",
+      "oseltamivir",
+      "oxacillin",
+      "para_aminosalicylic_acid",
+      "penicillin",
+      "peramivir",
+      "pibrentasvir",
+      "piperacillin",
+      "piperacillin_tazobactam",
+      "pivampicillin",
+      "polymyxin_b",
+      "posaconazole",
+      "pretomanid",
+      "pristinamycin",
+      "pyrazinamide",
+      "quinupristin_dalfopristin",
+      "raltegravir",
+      "ribavirin",
+      "rifabutin",
+      "rifampin",
+      "rifapentine",
+      "ritonavir",
+      "roxithromycin",
+      "sofosbuvir",
+      "spectinomycin",
+      "streptomycin",
+      "sulfadiazine",
+      "sulfamethoxazole",
+      "sulfisoxazole",
+      "tavaborole",
+      "tedizolid",
+      "telavancin",
+      "telithromycin",
+      "temocillin",
+      "tenofovir",
+      "terbinafine",
+      "tetracycline",
+      "ticarcillin",
+      "ticarcillin_clavulanate",
+      "tigecycline",
+      "tobramycin",
+      "trimethoprim",
+      "trimethoprim_sulfamethoxazole",
+      "tylosin",
+      "valacyclovir",
+      "valganciclovir",
+      "vancomycin",
+      "velpatasvir",
+      "voriconazole",
+      "zanamivir",
+      "zidovudine"
+     ]
+    },
+    {
+     "name": "sensitivity_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "susceptibility_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "susceptibility_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "susceptible",
+      "non_susceptible",
+      "indeterminate",
+      "na"
+     ]
+    }
+   ]
+  },
+  "misc_icu_orders": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "order_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "order_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "order_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "eeg",
+      "restraints",
+      "wound_care",
+      "oob",
+      "foley",
+      "extubation"
+     ]
+    },
+    {
+     "name": "order_status_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "order_status_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "sent",
+      "completed",
+      "resulted",
+      "canceled"
+     ]
+    }
+   ]
+  },
+  "model_registry": {
+   "columns": [
+    {
+     "name": "model_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "model_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "model_category",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "model_version",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "release_date",
+     "data_type": "DATE",
+     "required": false
+    },
+    {
+     "name": "is_live",
+     "data_type": "INT",
+     "required": true
+    }
+   ]
+  },
+  "output": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "recorded_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "output_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "output_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "biliary_drain",
+      "blood_loss",
+      "chest_tube_durable",
+      "chest_tube_temporary",
+      "colostomy",
+      "emesis",
+      "external_urinary_catheter",
+      "gastrojejunostomy",
+      "gastrostomy",
+      "gi_output_other",
+      "ileostomy",
+      "indwelling_urinary_catheter",
+      "jejunostomy",
+      "lumbar_csf_drain",
+      "nephrostomy",
+      "orogastric_nasogastric_tube",
+      "orogjejunal_nasojejunal_tube",
+      "other",
+      "other_cns_drain",
+      "other_procedure",
+      "ostomy_gi_other",
+      "paracentesis",
+      "pd_output",
+      "pericardial_drain",
+      "peritoneal_drain",
+      "procedural_drain_other",
+      "rectal_tube",
+      "respiratory",
+      "stool",
+      "suprapubic_catheter",
+      "thoracentesis",
+      "ultrafiltration",
+      "urethral",
+      "urostomy",
+      "urinary_other",
+      "ventricular_csf_drain",
+      "wound_drain"
+     ]
+    },
+    {
+     "name": "output_group",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "blood_loss",
+      "cns",
+      "drains",
+      "gi",
+      "other",
+      "procedure",
+      "renal_replacement_output",
+      "respiratory",
+      "ultrafiltration",
+      "urine"
+     ]
+    },
+    {
+     "name": "output_value",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "output_unit",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "mL",
+      "occurrences"
+     ]
+    },
+    {
+     "name": "lda_id",
+     "data_type": "VARCHAR",
+     "required": false
+    }
+   ],
+   "output_category_to_group_mapping": {
+    "biliary_drain": "drains",
+    "blood_loss": "blood_loss",
+    "chest_tube_durable": "drains",
+    "chest_tube_temporary": "drains",
+    "colostomy": "gi",
+    "emesis": "gi",
+    "external_urinary_catheter": "urine",
+    "gastrojejunostomy": "gi",
+    "gastrostomy": "gi",
+    "gi_output_other": "gi",
+    "ileostomy": "gi",
+    "indwelling_urinary_catheter": "urine",
+    "jejunostomy": "gi",
+    "lumbar_csf_drain": "cns",
+    "nephrostomy": "urine",
+    "orogastric_nasogastric_tube": "gi",
+    "orogjejunal_nasojejunal_tube": "gi",
+    "other": "other",
+    "other_cns_drain": "cns",
+    "other_procedure": "procedure",
+    "ostomy_gi_other": "gi",
+    "pd_output": "renal_replacement_output",
+    "paracentesis": "procedure",
+    "pericardial_drain": "drains",
+    "peritoneal_drain": "drains",
+    "procedural_drain_other": "drains",
+    "rectal_tube": "gi",
+    "respiratory": "respiratory",
+    "stool": "gi",
+    "suprapubic_catheter": "urine",
+    "thoracentesis": "procedure",
+    "ultrafiltration": "ultrafiltration",
+    "urethral": "urine",
+    "urostomy": "urine",
+    "urinary_other": "urine",
+    "ventricular_csf_drain": "cns",
+    "wound_drain": "drains"
+   }
+  },
+  "patient_assessments": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "documenting_provider_id",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "recorded_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "assessment_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "assessment_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "am_pac",
+      "ams",
+      "apgar",
+      "avpu",
+      "bps",
+      "braden_activity",
+      "braden_friction",
+      "braden_mobility",
+      "braden_moisture",
+      "braden_nutrition",
+      "braden_sensory",
+      "braden_total",
+      "cam_inattention",
+      "cam_loc",
+      "cam_mental",
+      "cam_thinking",
+      "cam_total",
+      "ciwa",
+      "cows",
+      "cpot_body",
+      "cpot_facial",
+      "cpot_intubated",
+      "cpot_muscle",
+      "cpot_total",
+      "cpot_vocalization",
+      "dvprs",
+      "gcs_eye",
+      "gcs_motor",
+      "gcs_total",
+      "gcs_verbal",
+      "icans",
+      "icsdc",
+      "icsdc_agitation",
+      "icsdc_disorientation",
+      "icsdc_hallucination",
+      "icsdc_inattention",
+      "icsdc_loc",
+      "icsdc_sleep",
+      "icsdc_speech",
+      "icsdc_symptoms",
+      "icsdc_total",
+      "ims",
+      "minds",
+      "morse_fall_scale",
+      "npi_l",
+      "npi_r",
+      "nrs",
+      "nvps",
+      "ot_discharge_recommend",
+      "painad",
+      "pt_discharge_recommend",
+      "pupil_reactive_l",
+      "pupil_reactive_r",
+      "pupil_size_l",
+      "pupil_size_r",
+      "rass",
+      "sas",
+      "sat_delivery_pass_fail",
+      "sat_delivery_performed",
+      "sat_escalating_sedation",
+      "sat_intracranial_pressure",
+      "sat_myocardial_ischemia",
+      "sat_neuromuscular_blockers",
+      "sat_screen_pass_fail",
+      "sat_screen_performed",
+      "sat_sedative_infusion",
+      "sbt_agitation",
+      "sbt_delivery_pass_fail",
+      "sbt_delivery_performed",
+      "sbt_fail_reason",
+      "sbt_inadequate_oxygenation",
+      "sbt_intracranial_pressure",
+      "sbt_no_spontaneous_effort",
+      "sbt_screen_pass_fail",
+      "sbt_screen_performed",
+      "sbt_vasopressor_use",
+      "tof",
+      "vas",
+      "wat"
+     ]
+    },
+    {
+     "name": "assessment_group",
+     "data_type": "VARCHAR",
+     "required": false,
+     "permissible_values": [
+      "delirium",
+      "discharge_recommend",
+      "mobility_or_activity",
+      "neurological",
+      "nursing_risk",
+      "pain",
+      "sat_delivery",
+      "sat_delivery_pass_or_fail",
+      "sat_screen",
+      "sat_screen_pass_or_fail",
+      "sbt_delivery",
+      "sbt_delivery_pass_or_fail",
+      "sbt_failure_reason",
+      "sbt_screen",
+      "sbt_screen_pass_or_fail",
+      "sedation_or_agitation",
+      "spontaneous_awakening_trial_sat",
+      "spontaneous_breathing_trial_sbt",
+      "withdrawal"
+     ]
+    },
+    {
+     "name": "numerical_value",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "categorical_value",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "text_value",
+     "data_type": "VARCHAR",
+     "required": true
+    }
+   ],
+   "assessment_category_to_group_mapping": {
+    "am_pac": "mobility_or_activity",
+    "ams": "mobility_or_activity",
+    "apgar": "neurological",
+    "avpu": "neurological",
+    "bps": "pain",
+    "braden_activity": "nursing_risk",
+    "braden_friction": "nursing_risk",
+    "braden_mobility": "mobility_or_activity",
+    "braden_moisture": "nursing_risk",
+    "braden_nutrition": "nursing_risk",
+    "braden_sensory": "nursing_risk",
+    "braden_total": "nursing_risk",
+    "cam_inattention": "delirium",
+    "cam_loc": "delirium",
+    "cam_mental": "delirium",
+    "cam_thinking": "delirium",
+    "cam_total": "delirium",
+    "ciwa": "withdrawal",
+    "cows": "withdrawal",
+    "cpot_body": "pain",
+    "cpot_facial": "pain",
+    "cpot_intubated": "pain",
+    "cpot_muscle": "pain",
+    "cpot_total": "pain",
+    "cpot_vocalization": "pain",
+    "dvprs": "pain",
+    "gcs_eye": "neurological",
+    "gcs_motor": "neurological",
+    "gcs_total": "neurological",
+    "gcs_verbal": "neurological",
+    "icans": "neurological",
+    "icsdc": "delirium",
+    "icsdc_agitation": "delirium",
+    "icsdc_disorientation": "delirium",
+    "icsdc_hallucination": "delirium",
+    "icsdc_inattention": "delirium",
+    "icsdc_loc": "delirium",
+    "icsdc_sleep": "delirium",
+    "icsdc_speech": "delirium",
+    "icsdc_symptoms": "delirium",
+    "icsdc_total": "delirium",
+    "ims": "mobility_or_activity",
+    "minds": "withdrawal",
+    "morse_fall_scale": "nursing_risk",
+    "npi_l": "neurological",
+    "npi_r": "neurological",
+    "nrs": "pain",
+    "nvps": "pain",
+    "ot_discharge_recommend": "discharge_recommend",
+    "painad": "pain",
+    "pt_discharge_recommend": "discharge_recommend",
+    "pupil_reactive_l": "neurological",
+    "pupil_reactive_r": "neurological",
+    "pupil_size_l": "neurological",
+    "pupil_size_r": "neurological",
+    "rass": "sedation_or_agitation",
+    "sas": "sedation_or_agitation",
+    "sat_delivery_pass_fail": "sat_delivery_pass_or_fail",
+    "sat_delivery_performed": "sat_delivery",
+    "sat_escalating_sedation": "spontaneous_awakening_trial_sat",
+    "sat_intracranial_pressure": "spontaneous_awakening_trial_sat",
+    "sat_myocardial_ischemia": "spontaneous_awakening_trial_sat",
+    "sat_neuromuscular_blockers": "spontaneous_awakening_trial_sat",
+    "sat_screen_pass_fail": "sat_screen_pass_or_fail",
+    "sat_screen_performed": "sat_screen",
+    "sat_sedative_infusion": "spontaneous_awakening_trial_sat",
+    "sbt_agitation": "spontaneous_breathing_trial_sbt",
+    "sbt_delivery_pass_fail": "sbt_delivery_pass_or_fail",
+    "sbt_delivery_performed": "sbt_delivery",
+    "sbt_fail_reason": "sbt_failure_reason",
+    "sbt_inadequate_oxygenation": "spontaneous_breathing_trial_sbt",
+    "sbt_intracranial_pressure": "spontaneous_breathing_trial_sbt",
+    "sbt_no_spontaneous_effort": "spontaneous_breathing_trial_sbt",
+    "sbt_screen_pass_fail": "sbt_screen_pass_or_fail",
+    "sbt_screen_performed": "sbt_screen",
+    "sbt_vasopressor_use": "spontaneous_breathing_trial_sbt",
+    "tof": "neurological",
+    "vas": "pain",
+    "wat": "withdrawal"
+   }
+  },
+  "patient_attributes": {
+   "columns": [
+    {
+     "name": "patient_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "recorded_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "attribute_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "attribute_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "alcohol_use",
+      "employment_status",
+      "financial_strain",
+      "food_insecurity",
+      "functional_status",
+      "housing_status",
+      "interpersonal_safety",
+      "marital_status",
+      "organ_donor",
+      "pregnancy_status",
+      "smoking_status",
+      "social_isolation",
+      "substance_use",
+      "transportation_barrier",
+      "utility_insecurity"
+     ]
+    },
+    {
+     "name": "attribute_group",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "care_preferences",
+      "functional",
+      "health_related_social_needs",
+      "reproductive",
+      "sociodemographic",
+      "substance_use_behavior"
+     ]
+    },
+    {
+     "name": "attribute_value_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "attribute_value_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "active",
+      "connected",
+      "current",
+      "disabled",
+      "divorced",
+      "former",
+      "full_time",
+      "fully_dependent",
+      "heavy",
+      "history",
+      "housed",
+      "independent",
+      "insecure",
+      "isolated",
+      "married",
+      "never",
+      "no",
+      "none",
+      "not_pregnant",
+      "part_time",
+      "partially_dependent",
+      "postpartum",
+      "pregnant",
+      "present",
+      "retired",
+      "safe",
+      "secure",
+      "separated",
+      "single",
+      "social",
+      "student",
+      "undomiciled",
+      "unemployed",
+      "unknown",
+      "unsafe",
+      "unstable",
+      "widowed",
+      "yes"
+     ]
+    }
+   ]
+  },
+  "patient_diagnosis": {
+   "columns": [
+    {
+     "name": "patient_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "diagnosis_code",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "diagnosis_code_format",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "ICD10CM"
+     ]
+    },
+    {
+     "name": "source_type",
+     "data_type": "VARCHAR",
+     "required": false,
+     "permissible_values": [
+      "problem_list",
+      "medical_history",
+      "encounter_dx"
+     ]
+    },
+    {
+     "name": "start_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "end_dttm",
+     "data_type": "DATETIME",
+     "required": false
+    }
+   ]
+  },
+  "patient_procedures": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "billing_provider_id",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "performing_provider_id",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "procedure_code",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "procedure_code_format",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "CPT",
+      "ICD10PCS",
+      "HCPCS"
+     ]
+    },
+    {
+     "name": "procedure_billed_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    }
+   ]
+  },
+  "patient": {
+   "columns": [
+    {
+     "name": "patient_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "race_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "race_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "black_or_african_american",
+      "white",
+      "american_indian_or_alaska_native",
+      "asian",
+      "native_hawaiian_or_other_pacific_islander",
+      "middle_eastern_or_north_african",
+      "unknown",
+      "other"
+     ]
+    },
+    {
+     "name": "ethnicity_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "ethnicity_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "hispanic",
+      "non_hispanic",
+      "unknown"
+     ]
+    },
+    {
+     "name": "sex_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "sex_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "male",
+      "female",
+      "unknown"
+     ]
+    },
+    {
+     "name": "birth_date",
+     "data_type": "DATE",
+     "required": true
+    },
+    {
+     "name": "death_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "language_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "language_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "english",
+      "spanish",
+      "french",
+      "haitian_creole",
+      "italian",
+      "portuguese",
+      "german",
+      "yiddish_pennsylvania_dutch_or_other_west_germanic_languages",
+      "greek",
+      "russian",
+      "polish",
+      "serbo_croatian",
+      "ukrainian_or_other_slavic_languages",
+      "armenian",
+      "persian",
+      "gujarati",
+      "hindi",
+      "urdu",
+      "punjabi",
+      "bengali",
+      "nepali_marathi_or_other_indic_languages",
+      "other_european_indo_european_languages",
+      "other_asian_indo_european_languages",
+      "telugu",
+      "tamil",
+      "malayalam_kannada_or_other_dravidian_languages",
+      "chinese",
+      "japanese",
+      "korean",
+      "vietnamese",
+      "khmer",
+      "thai_lao_or_other_tai_kadai_languages",
+      "other_languages_of_asia",
+      "tagalog",
+      "ilocano_samoan_hawaiian_or_other_austronesian_languages",
+      "arabic",
+      "hebrew",
+      "amharic_somali_or_other_afro_asiatic_languages",
+      "yoruba_twi_igbo_or_other_languages_of_western_africa",
+      "swahili_or_other_languages_of_central_eastern_and_southern_africa",
+      "navajo",
+      "other_native_languages_of_north_america",
+      "other_and_unspecified_languages",
+      "sign_language",
+      "unknown"
+     ]
+    },
+    {
+     "name": "language_interpreter",
+     "data_type": "INT",
+     "required": false,
+     "permissible_values": [
+      0,
+      1
+     ]
+    }
+   ]
+  },
+  "place_based_index": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "index_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "index_value",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "index_version",
+     "data_type": "VARCHAR",
+     "required": true
+    }
+   ]
+  },
+  "position": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "recorded_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "position_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "position_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "prone",
+      "not_prone"
+     ]
+    }
+   ]
+  },
+  "provider": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "provider_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "start_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "stop_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "provider_role_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "provider_role_category",
+     "data_type": "VARCHAR",
+     "required": true
+    }
+   ]
+  },
+  "radiology": {
+   "columns": [
+    {
+     "name": "patient_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "radiology_accession",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "radiology_order_dttm",
+     "data_type": "DATETIME",
+     "required": false
+    },
+    {
+     "name": "radiology_capture_dttm",
+     "data_type": "DATETIME",
+     "required": false
+    },
+    {
+     "name": "radiology_report_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "radiology_order_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "radiology_modality_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "ct",
+      "mr",
+      "nm",
+      "other",
+      "us",
+      "xr"
+     ]
+    },
+    {
+     "name": "radiology_region_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "abdomen",
+      "abdomen_pelvis",
+      "brain",
+      "chest",
+      "heart",
+      "lower_extremity",
+      "maxillofacial",
+      "neck",
+      "other",
+      "pelvis",
+      "ruq",
+      "spine",
+      "upper_extremity",
+      "vascular",
+      "whole_body"
+     ]
+    },
+    {
+     "name": "iv_contrast_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "not_applicable",
+      "unknown",
+      "with_and_without_contrast",
+      "with_contrast",
+      "without_contrast"
+     ]
+    },
+    {
+     "name": "radiology_location_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "portable",
+      "radiology",
+      "unknown"
+     ]
+    },
+    {
+     "name": "radiology_report_text",
+     "data_type": "VARCHAR",
+     "required": false
+    }
+   ]
+  },
+  "respiratory_support": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "recorded_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "device_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "device_id",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "device_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "imv",
+      "nippv",
+      "cpap",
+      "hfnc",
+      "face_mask",
+      "trach_collar",
+      "t_piece",
+      "nasal_cannula",
+      "blow_by",
+      "room_air",
+      "other"
+     ]
+    },
+    {
+     "name": "vent_brand_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "mode_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "mode_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "acvc",
+      "pressure_control",
+      "prvc",
+      "simv",
+      "ps_or_cpap",
+      "volume_support",
+      "avaps",
+      "aprv",
+      "other"
+     ]
+    },
+    {
+     "name": "tracheostomy",
+     "data_type": "INT",
+     "required": true,
+     "permissible_values": [
+      0,
+      1
+     ]
+    },
+    {
+     "name": "fio2_set",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "lpm_set",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "tidal_volume_set",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "resp_rate_set",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "pressure_control_set",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "pressure_support_set",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "flow_rate_set",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "peak_inspiratory_pressure_set",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "inspiratory_time_set",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "peep_set",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "tidal_volume_obs",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "resp_rate_obs",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "plateau_pressure_obs",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "peak_inspiratory_pressure_obs",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "peep_obs",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "minute_vent_obs",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "mean_airway_pressure_obs",
+     "data_type": "DOUBLE",
+     "required": true
+    }
+   ]
+  },
+  "scores": {
+   "columns": [
+    {
+     "name": "model_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "recorded_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "score_value",
+     "data_type": "DOUBLE",
+     "required": true
+    }
+   ]
+  },
+  "therapy_details": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "session_start_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "therapy_element_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "therapy_element_category",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "therapy_element_value",
+     "data_type": "VARCHAR",
+     "required": true
+    }
+   ]
+  },
+  "transfusion": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "transfusion_start_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "transfusion_end_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "component_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "component_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "cryoprecipitate",
+      "plasma",
+      "platelets",
+      "prbc",
+      "whole_blood"
+     ]
+    },
+    {
+     "name": "attribute_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "volume_transfused",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "volume_unit",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "product_code",
+     "data_type": "VARCHAR",
+     "required": false
+    }
+   ]
+  },
+  "validated_diagnosis": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "diagnosis_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "diagnosis_category",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "diagnosis_start_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "diagnosis_end_dttm",
+     "data_type": "DATETIME",
+     "required": false
+    },
+    {
+     "name": "validation_method",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "manual_chart_review",
+      "consensus_panel",
+      "automated_with_review"
+     ]
+    },
+    {
+     "name": "diagnosis_status",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "confirmed",
+      "ruled_out",
+      "uncertain"
+     ]
+    },
+    {
+     "name": "reviewer_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "review_timestamp",
+     "data_type": "DATETIME",
+     "required": true
+    }
+   ]
+  },
+  "vitals": {
+   "columns": [
+    {
+     "name": "hospitalization_id",
+     "data_type": "VARCHAR",
+     "required": true
+    },
+    {
+     "name": "recorded_dttm",
+     "data_type": "DATETIME",
+     "required": true
+    },
+    {
+     "name": "measured_dttm",
+     "data_type": "DATETIME",
+     "required": false
+    },
+    {
+     "name": "vital_name",
+     "data_type": "VARCHAR",
+     "required": false
+    },
+    {
+     "name": "vital_category",
+     "data_type": "VARCHAR",
+     "required": true,
+     "permissible_values": [
+      "dbp",
+      "heart_rate",
+      "height_cm",
+      "intracranial_pressure",
+      "map",
+      "pulse_pressure_variation",
+      "respiratory_rate",
+      "sbp",
+      "spo2",
+      "temp_c",
+      "weight_kg"
+     ]
+    },
+    {
+     "name": "vital_value",
+     "data_type": "DOUBLE",
+     "required": true
+    },
+    {
+     "name": "meas_site_name",
+     "data_type": "VARCHAR",
+     "required": false
+    }
+   ]
+  }
+ }
+}

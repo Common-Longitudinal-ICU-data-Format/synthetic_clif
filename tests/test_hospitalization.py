@@ -91,3 +91,12 @@ class TestHospitalizationGenerator:
         assert (df["discharge_category"] == "Expired").any(), (
             "Expected at least one 'Expired' discharge but found none"
         )
+
+    def test_readmissions_with_few_patients(self, seed, mcide):
+        """Fewer than 4 patients with readmissions must not loop forever."""
+        from synthetic_clif.generators.patient import PatientGenerator
+
+        patients = PatientGenerator(seed=seed, mcide=mcide).generate(n_patients=3)
+        gen = HospitalizationGenerator(seed=seed, mcide=mcide)
+        df = gen.generate(patients, n_hospitalizations=5)
+        assert len(df) == 5

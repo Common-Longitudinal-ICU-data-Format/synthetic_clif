@@ -1,6 +1,6 @@
 # synthetic_clif
 
-Generate synthetic [CLIF (Common Longitudinal ICU Format)](https://clif-consortium.github.io/website/) 2.1.0 datasets for testing and development.
+Generate synthetic [CLIF (Common Longitudinal ICU Format)](https://clif-consortium.github.io/website/) 2.1.0 and 3.0.0 datasets for testing and development. Output is CLIF 2.1.0 by default; pass `--clif-version 3.0` for CLIF 3.0.0 (see [CLIF 3.0.0 output](#clif-300-output)).
 
 ## Quick Start: Download the Pre-generated Dataset
 
@@ -69,6 +69,7 @@ Options:
   --format [parquet|csv]  Output format (default: parquet)
   --workers INT, -w INT   Number of parallel workers (default: 1)
   --no-concept-tables     Skip generating concept tables (draft status)
+  --clif-version VERSION  CLIF version of the output: 2.1 (default) or 3.0
 ```
 
 ### Python API
@@ -83,6 +84,7 @@ dataset = SyntheticCLIFDataset(
     seed=42,
     include_concept_tables=True,
     workers=4,  # parallel generation (default: 1)
+    clif_version="2.1",  # or "3.0" for CLIF 3.0.0 tables
 )
 
 tables = dataset.generate()
@@ -134,6 +136,42 @@ The package generates all 28 CLIF 2.1.0 tables:
 | provider | Care team assignments |
 | therapy_details | PT/OT/Speech session details |
 | transfusion | Blood product administration |
+
+## CLIF 3.0.0 Output
+
+`--clif-version 3.0` (or `clif_version="3.0"`) writes CLIF 3.0.0 tables. The
+generators still simulate in 2.1 terms; `synthetic_clif/clif3/` then converts
+the tables to 3.0.0 with the same seed, so patient and hospitalization IDs match
+a 2.1 run.
+
+- **Vocabulary:** every `*_category`, `*_group` and `*_type` value is lowercase
+  snake_case, with the official 2.1 to 3.0 renames (for example `High Flow NC`
+  to `hfnc`, `Long Term Care Hospital (LTACH)` to `ltach`).
+- **Renamed tables:** `ecmo_mcs` becomes `mcs` (long format, one row per
+  setting); `intake_output` splits into `input` and `output`; `key_icu_orders`
+  becomes `consult_orders`.
+- **New columns:** `adt.room_id`/`bed_id`, `vitals.measured_dttm`,
+  `labs.loinc_version`, `administering_provider_id` on medication
+  administrations (linked to the `provider` table), `patient.language_interpreter`
+  and others. Troponin is reported in ng/L.
+- **New tables derived from existing data:** `airway` (from IMV episodes and
+  tracheostomy), `misc_icu_orders` (extubation orders), `line` (from
+  vasopressors, CRRT, invasive hemodynamics) and `ed_encounter` (from ED ADT rows).
+- **Not yet generated:** `drain`, `intermittent_dialysis`, `patient_attributes`,
+  `radiology`, `clinical_notes_facts`, `validated_diagnosis`, `model_registry`
+  and `scores`. PVR and SvO2 rows of `invasive_hemodynamics` are dropped because
+  3.0 has no category for them.
+
+The 3.0.0 schema (columns, types, permissible values, group mappings) is
+vendored in `synthetic_clif/clif3/clif3_schema.json`, built by
+`tools/build_clif3_schema.py` from the CLIF `3.0` branch as packaged in
+clifpy. A built-in check covers all 41 tables, including the ones clifpy has no
+table class for yet:
+
+```python
+from synthetic_clif.clif3.validate import validate_tables
+errors = validate_tables(dataset.generate())  # {table: []} when valid
+```
 
 ## Data Characteristics
 

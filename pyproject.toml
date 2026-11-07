@@ -30,6 +30,7 @@ include = ["synthetic_clif*"]
 
 [tool.setuptools.package-data]
 "synthetic_clif.config.mcide" = ["**/*.csv"]
+"synthetic_clif.clif3" = ["*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -30,6 +30,9 @@ Examples:
   # Output as CSV instead of parquet
   python -m synthetic_clif --output data/ --format csv
 
+  # Generate CLIF 3.0.0 tables instead of 2.1
+  python -m synthetic_clif --hospitalizations 100 --output data/v3/ --clif-version 3.0
+
   # Generate with 4 parallel workers (speeds up large datasets)
   python -m synthetic_clif --hospitalizations 10000 --output data/ -w 4
         """,
@@ -94,6 +97,11 @@ Examples:
         help="Number of parallel workers for generation (default: 1, sequential)",
     )
     parser.add_argument(
+        "--clif-version",
+        default="2.1",
+        help="CLIF version of the output: 2.1 (default) or 3.0",
+    )
+    parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
@@ -126,6 +134,7 @@ Examples:
         mcide_dir=mcide_dir,
         include_concept_tables=not args.no_concept_tables,
         workers=args.workers,
+        clif_version=args.clif_version,
     )
 
     # Generate dataset
