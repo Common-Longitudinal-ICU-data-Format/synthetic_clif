@@ -69,7 +69,7 @@ class PatientGenerator(BaseGenerator):
             DataFrame with patient table columns
         """
         if reference_date is None:
-            reference_date = datetime.now(timezone.utc)
+            reference_date = CLIF_DATE_END  # fixed, so the same seed gives the same birth dates
 
         # Generate patient IDs
         patient_ids = self.generate_uuids(n_patients)

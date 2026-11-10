@@ -175,10 +175,23 @@ errors = validate_tables(dataset.generate())  # {table: []} when valid
 
 ## Data Characteristics
 
-The synthetic data includes realistic artifacts found in real EHR data:
+The synthetic data includes realistic artifacts found in real EHR data. [CHANGELOG.md](CHANGELOG.md) lists every relationship between tables and what is not yet covered:
 
-- **Temporal autocorrelation** - Sequential vital signs follow physiologically plausible patterns
-- **Inter-variable correlation** - Low SpO2 triggers respiratory support escalation; low MAP triggers vasopressors
+- **One shared course per stay** - Vitals, respiratory support, continuous medications and labs all observe the same hidden hourly course (`synthetic_clif/physiology/`), so they agree with each other:
+  - MAP comes from the same SBP/DBP reading (about DBP + pulse pressure / 3)
+  - Vasopressors start after MAP falls and are titrated to a MAP goal; lactate is higher on pressors
+  - Devices escalate and wean with respiratory failure; FiO2 is titrated to oxygenation, so SpO2 falls as FiO2 rises
+  - Ventilator settings persist through an IMV episode (tidal volume 6-8 mL/kg predicted body weight, ARDSNet PEEP); plateau, peak pressure and minute ventilation follow from the settings
+  - Sedation and analgesia run during IMV episodes
+  - Labs keep each patient's baseline from day to day; BUN tracks creatinine, chloride follows the anion gap, and blood-gas pH follows Henderson-Hasselbalch
+- **Every table follows the course** - Clinical decisions are layered on the same course (`physiology/events.py`), and the other tables record them:
+  - Who dies, where survivors go, and code status depend on peak illness, organ support and age; only a patient's last stay can end in death, and `death_dttm` matches it
+  - ICU stays cover ventilator, vasopressor and CRRT time; RASS, GCS and CAM-ICU follow sedation depth and delirium
+  - Infection leads to cultures (blood, urine, sputum, wound) before antibiotics; vancomycin stops when no gram-positive organism grows; antibiotic intervals lengthen with kidney injury
+  - CRRT starts for severe kidney injury and lowers creatinine and potassium; proning for severe hypoxaemia raises PaO2; ECMO, Impella and balloon pumps for refractory failure
+  - Transfusions follow low haemoglobin, platelets or a high INR and raise them; intake/output records the same blood volumes plus boluses, maintenance fluid, feeds and urine output that falls with kidney injury and shock
+  - Procedures, diagnoses, line placement, PA-catheter readings, medication orders, PCR tests, consults and therapy sessions all come from the same events
+  - Height, body size and chronic disease (diabetes, COPD, CKD) belong to the patient, so readmissions and the problem list agree with the labs
 - **Irregular measurement frequency** - ICU vitals ~hourly, ward vitals ~q4h
 - **Missingness patterns** - MCAR, MAR, and MNAR based on clinical documentation practices
 - **Outliers** - Physiologically plausible extremes (fever spikes, hypotensive episodes)

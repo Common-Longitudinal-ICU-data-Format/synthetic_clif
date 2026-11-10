@@ -50,6 +50,21 @@ python -m synthetic_clif --hospitalizations 100 --output data/v21/ --clif-versio
   maps 2.1 values to 3.0, `convert.py` turns the generated 2.1 tables into 3.0
   tables (and derives airway, line, misc_icu_orders, ed_encounter), and
   `validate.py` checks any table against the 3.0 schema
+- **`synthetic_clif/physiology/`**: `course.py` builds one hidden hourly `HospitalCourse` per
+  hospitalization (severity, shock, respiratory failure, kidney injury, infection, devices,
+  ventilator settings, vasopressor titration, vitals and lab values). The vitals, respiratory,
+  continuous-medication and labs generators observe it via `course_for_row(hosp_row)`, adding
+  only measurement noise. The course is seeded from a private `_course_seed` column that
+  `SyntheticCLIFDataset` adds to a copy of the hospitalization table (with `_sex`); without it
+  the seed is a hash of the hospitalization id, so standalone generators still agree.
+  Keep any new per-stay state derivable from the hospitalization row, because parallel
+  workers rebuild generators from (seed, mcide_dir) and only see their chunk.
+  `events.py` adds slower clinical decisions to the course (infection and antibiotics,
+  CRRT, proning, MCS, comfort care, lines, sedation/RASS/GCS, fluids, transfusions, code
+  status), each from its own seeded stream so adding one never reshuffles the others.
+  `outcomes.py` decides death and disposition; `SyntheticCLIFDataset._assign_outcomes` writes
+  them before any other table is generated, and `course_for_row` rebuilds an expired stay
+  with a terminal decline. Patient-level traits come from `_patient_seed`.
 - **`synthetic_clif/models/`**: Dataclasses representing CLIF entities and patient state
 - **`synthetic_clif/simulation/`**: Patient trajectory simulation engine
   - Maintains physiologically coherent state across time
@@ -96,4 +111,5 @@ The generator introduces these real-world artifacts:
 2. **Outliers**: Physiologically plausible extreme values (e.g., fever spikes) and documentation errors
 3. **Irregular timing**: Vitals q1h in ICU, q4h on floor; labs ordered based on clinical need
 4. **Temporal correlation**: Sequential readings follow autoregressive patterns
-5. **Inter-variable correlation**: Low SpO2 correlates with respiratory support escalation
+5. **Inter-variable correlation**: vitals, respiratory support, continuous meds and labs share one
+   course per stay (see `synthetic_clif/physiology/`); `tests/test_physiology.py` checks it

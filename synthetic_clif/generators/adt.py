@@ -8,6 +8,7 @@ import pandas as pd
 
 from synthetic_clif.generators.base import BaseGenerator
 from synthetic_clif.config.mcide import MCIDELoader
+from synthetic_clif.physiology.course import course_for_row
 
 
 class ADTGenerator(BaseGenerator):
@@ -108,9 +109,12 @@ class ADTGenerator(BaseGenerator):
             hospital_id = self.rng.choice(hospital_ids)
             hospital_type = hospital_map[hospital_id]
 
-            # Generate location sequence
-            adt_events = self._generate_location_sequence(
-                hosp_id, admit_time, discharge_time, hospital_id, hospital_type
+            # Locations follow the stay's clinical course: the patient is in
+            # the ICU whenever the course needs ICU-level support.
+            course = course_for_row(hosp)
+            adt_events = self._generate_course_sequence(
+                hosp_id, admit_time, discharge_time, hospital_id, hospital_type,
+                course, hosp.get("admission_type_category"),
             )
             records.extend(adt_events)
 
@@ -121,6 +125,128 @@ class ADTGenerator(BaseGenerator):
             df["out_dttm"] = pd.to_datetime(df["out_dttm"], utc=True)
 
         return df
+
+    def _generate_course_sequence(
+        self,
+        hospitalization_id: str,
+        admit_time: datetime,
+        discharge_time: datetime,
+        hospital_id: str,
+        hospital_type: str,
+        course,
+        admission_type=None,
+    ) -> list[dict]:
+        """ED or OR, then ICU while support is needed, then stepdown and ward."""
+        los_h = (discharge_time - admit_time).total_seconds() / 3600
+        if course is None or los_h <= 0:
+            return self._generate_location_sequence(
+                hospitalization_id, admit_time, discharge_time, hospital_id, hospital_type
+            )
+        n = course.n_hours
+        need = (
+            (course.level >= 2) | (course.ne_eq > 0) | course.crrt | course.prone
+            | (course.severity > 0.6)
+        )
+        for m in course.mcs:
+            need[m["start"]:m["end"]] = True
+
+        segs = []  # (start_h, end_h, category)
+        t0 = 0.0
+        adm = str(admission_type or "").lower()
+        if adm == "elective":
+            t0 = self.rng.uniform(2, 6)
+            segs.append((0.0, t0, "procedural"))
+        elif adm in ("ed", "") or self.rng.random() < 0.15:
+            t0 = self.rng.uniform(2, 8)
+            segs.append((0.0, t0, "ed"))
+        t0 = min(t0, los_h)
+
+        icu = []
+        runs = []
+        start = None
+        for i, v in enumerate(need):
+            if v and start is None:
+                start = i
+            elif not v and start is not None:
+                runs.append((start, i))
+                start = None
+        if start is not None:
+            runs.append((start, n))
+        merged = []
+        for a, b in runs:
+            if merged and a - merged[-1][1] < 24:
+                merged[-1] = (merged[-1][0], b)
+            else:
+                merged.append((a, b))
+        for a, b in merged:
+            lo = max(a - self.rng.uniform(0, 2), t0)
+            hi = min(b + self.rng.uniform(12, 36), los_h)
+            if hi > lo:
+                icu.append([lo, hi])
+        if not icu and (adm == "elective" or self.rng.random() < 0.7):
+            # Observation-level ICU stay for patients who never needed support
+            icu.append([t0, min(t0 + self.rng.uniform(12, 36), los_h)])
+        if course.expired and icu and los_h - icu[-1][1] < 24:
+            icu[-1][1] = los_h  # deaths happen in the ICU
+        joined = []
+        for lo, hi in icu:
+            if joined and lo - joined[-1][1] < 12:
+                joined[-1][1] = hi
+            else:
+                joined.append([lo, hi])
+
+        cur = t0
+        for lo, hi in joined:
+            if lo > cur:
+                segs.append((cur, lo, "ward"))
+            segs.append((lo, hi, "icu"))
+            cur = hi
+            if cur < los_h - 6 and self.rng.random() < 0.35:
+                sd = min(cur + self.rng.uniform(12, 48), los_h)
+                segs.append((cur, sd, "stepdown"))
+                cur = sd
+        if cur < los_h:
+            segs.append((cur, los_h, "ward" if joined or self.rng.random() < 0.6 else "stepdown"))
+
+        icu_type = self._icu_type(course, adm)
+        ward_name = str(self.rng.choice(["Medical Ward", "Surgical Ward", "General Ward"]))
+        events = []
+        for lo, hi, cat in segs:
+            if hi - lo <= 0:
+                continue
+            if cat == "icu":
+                loc_type = icu_type
+                name = icu_type.replace("_", " ").title().replace("Icu", "ICU")
+            else:
+                loc_type = None
+                name = {"ed": "Emergency Department", "stepdown": "Stepdown Unit",
+                        "procedural": "Operating Room"}.get(cat, ward_name)
+            if events and events[-1]["location_category"] == cat:
+                events[-1]["out_dttm"] = admit_time + timedelta(hours=hi)
+                continue
+            events.append({
+                "hospitalization_id": hospitalization_id,
+                "hospital_id": hospital_id,
+                "hospital_type": hospital_type,
+                "in_dttm": admit_time + timedelta(hours=lo),
+                "out_dttm": admit_time + timedelta(hours=hi),
+                "location_name": name,
+                "location_category": cat,
+                "location_type": loc_type,
+            })
+        if events:
+            events[0]["in_dttm"] = admit_time
+            events[-1]["out_dttm"] = discharge_time
+        return events
+
+    def _icu_type(self, course, admission_type: str) -> str:
+        if course.shock_type == "cardiogenic" and self.rng.random() < 0.7:
+            return "cardiac_icu"
+        if admission_type == "elective":
+            return str(self.rng.choice(["surgical_icu", "cardiothoracic_surgical_icu", "neurosurgical_icu"],
+                                       p=[0.5, 0.3, 0.2]))
+        return str(self.rng.choice(["medical_icu", "general_icu", "mixed_neuro_icu", "surgical_icu"],
+                                   p=[0.5, 0.3, 0.1, 0.1]))
 
     def _generate_location_sequence(
         self,

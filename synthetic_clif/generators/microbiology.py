@@ -2,13 +2,13 @@
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-import uuid
 
 import numpy as np
 import pandas as pd
 
 from synthetic_clif.generators.base import BaseGenerator
 from synthetic_clif.config.mcide import MCIDELoader
+from synthetic_clif.physiology.course import course_for_row
 
 
 class MicrobiologyCultureGenerator(BaseGenerator):
@@ -87,7 +87,13 @@ class MicrobiologyCultureGenerator(BaseGenerator):
         "streptococcus_pneumoniae": "streptococcus",
         "enterobacter_cloacae": "enterobacter",
         "proteus_mirabilis": "other_organism",
+        "staphylococcus_epidermidis": "staphylococcus_coag_neg",
     }
+    GRAM_POS = {"staphylococcus_aureus", "enterococcus_faecalis", "streptococcus_pneumoniae"}
+    COURSE_FLUID = {"blood": "blood_buffy", "urine": "genito_urinary_tract",
+                    "respiratory": "respiratory_tract", "wound": "woundsite"}
+    LOINC = {"blood_buffy": "634-6", "genito_urinary_tract": "630-4",
+             "respiratory_tract": "6463-4", "woundsite": "6462-6"}
 
     METHOD_CATEGORIES = ["culture", "gram_stain", "smear"]
     METHOD_WEIGHTS = [0.80, 0.15, 0.05]
@@ -122,13 +128,10 @@ class MicrobiologyCultureGenerator(BaseGenerator):
             if pd.isna(discharge_time):
                 discharge_time = admit_time + timedelta(days=5)
 
-            # Determine if this hospitalization has cultures
-            if self.rng.random() > culture_rate:
+            course = course_for_row(hosp)
+            if course is None:
                 continue
-
-            hosp_cultures = self._generate_hospitalization_cultures(
-                hosp_id, patient_id, admit_time, discharge_time, positive_rate
-            )
+            hosp_cultures = self._course_cultures(hosp_id, patient_id, admit_time, discharge_time, course)
             records.extend(hosp_cultures)
 
         df = pd.DataFrame(records)
@@ -139,6 +142,71 @@ class MicrobiologyCultureGenerator(BaseGenerator):
             df["result_dttm"] = pd.to_datetime(df["result_dttm"], utc=True)
 
         return df
+
+    def _hex_id(self) -> str:
+        return f"{int(self.rng.integers(0, 16**8)):08x}"
+
+    def _course_cultures(self, hosp_id, patient_id, admit_time, discharge_time, course) -> list[dict]:
+        """Cultures drawn when the course recognises infection, or for fever.
+
+        The infecting organism is chosen once per stay to match the course's
+        pathogen (gram-positive or gram-negative) and reappears in every
+        culture from an infected site; contaminants are coagulase-negative
+        staphylococci in a single blood culture set.
+        """
+        rows = []
+        pathogen = {}
+        for cx in course.cultures:
+            fluid = self.COURSE_FLUID[cx["fluid"]]
+            order_time = admit_time + timedelta(hours=float(cx["h"]))
+            if order_time >= discharge_time:
+                continue
+            collect_time = order_time + timedelta(minutes=int(self.rng.integers(10, 60)))
+            if not cx["positive"]:
+                organism = "no_growth"
+            elif cx.get("contaminant"):
+                organism = "staphylococcus_epidermidis"
+            else:
+                options = [o for o in self.ORGANISM_BY_FLUID[fluid]["organisms"] if o != "no_growth"]
+                weights = np.array([w for o, w in zip(self.ORGANISM_BY_FLUID[fluid]["organisms"],
+                                                      self.ORGANISM_BY_FLUID[fluid]["weights"]) if o != "no_growth"])
+                gram = course.pathogen_gram
+                if course.infected and gram:
+                    match = [(o, w) for o, w in zip(options, weights)
+                             if (o in self.GRAM_POS) == (gram == "gram_pos")]
+                    if match:
+                        options, weights = map(list, zip(*match))
+                        weights = np.array(weights)
+                known = [o for o in pathogen.values() if o in options]
+                organism = known[0] if known else str(self.rng.choice(options, p=weights / weights.sum()))
+                pathogen[fluid] = organism
+            if organism == "no_growth":
+                hours = {"blood_buffy": 120, "genito_urinary_tract": 36, "respiratory_tract": 60}.get(fluid, 72)
+                result_time = collect_time + timedelta(hours=hours + self.rng.uniform(-6, 6))
+                organism_id = self._hex_id()
+                group = "no_growth"
+            else:
+                result_time = collect_time + timedelta(hours=self.rng.uniform(12, 48))
+                organism_id = self._hex_id()
+                group = self.ORGANISM_GROUPS.get(organism, "other_organism")
+            method = "culture" if self.rng.random() < 0.9 else "gram_stain"
+            rows.append({
+                "patient_id": patient_id,
+                "hospitalization_id": hosp_id,
+                "organism_id": organism_id,
+                "order_dttm": order_time,
+                "collect_dttm": collect_time,
+                "result_dttm": result_time,
+                "fluid_category": fluid,
+                "fluid_name": self.name_from_category(fluid),
+                "method_category": method,
+                "method_name": self.name_from_category(method),
+                "organism_category": organism,
+                "organism_name": self.name_from_category(organism),
+                "organism_group": group,
+                "lab_loinc_code": self.LOINC.get(fluid, ""),
+            })
+        return rows
 
     def _generate_hospitalization_cultures(
         self,
@@ -170,7 +238,7 @@ class MicrobiologyCultureGenerator(BaseGenerator):
             )
 
             # Generate culture ID
-            culture_id = str(uuid.uuid4())[:8]
+            culture_id = self._hex_id()
 
             # Determine organism
             is_positive = self.rng.random() < positive_rate
@@ -185,7 +253,7 @@ class MicrobiologyCultureGenerator(BaseGenerator):
                 weights = organism_data["weights"][:-1]
                 weights = np.array(weights) / sum(weights)
                 organism = self.rng.choice(organisms, p=weights)
-                organism_id = str(uuid.uuid4())[:8]
+                organism_id = self._hex_id()
                 organism_group = self.ORGANISM_GROUPS.get(organism, "Other")
             else:
                 organism = "no_growth"

@@ -2,6 +2,7 @@
 
 import io
 import math
+import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Optional
@@ -131,7 +132,14 @@ def parallel_generate_chunked(
     mcide_dir_str = str(mcide_dir) if mcide_dir else None
 
     futures = []
-    with ProcessPoolExecutor(max_workers=n_workers) as executor:
+    # Vitals, labs and respiratory run this function from three threads at
+    # once. Forking a multi-threaded parent can copy a lock another thread
+    # holds (pyarrow's, for one) into the child, which then hangs. Start
+    # workers from a clean forkserver (or spawn) process instead.
+    method = "forkserver" if "forkserver" in multiprocessing.get_all_start_methods() else "spawn"
+    with ProcessPoolExecutor(
+        max_workers=n_workers, mp_context=multiprocessing.get_context(method)
+    ) as executor:
         for chunk, chunk_seed in zip(chunks, seeds):
             # Filter extra DataFrames to this chunk's hospitalization IDs
             chunk_hosp_ids = set(chunk["hospitalization_id"])
