@@ -175,7 +175,7 @@ errors = validate_tables(dataset.generate())  # {table: []} when valid
 
 ## Data Characteristics
 
-The synthetic data includes realistic artifacts found in real EHR data:
+The synthetic data includes realistic artifacts found in real EHR data. [CHANGELOG.md](CHANGELOG.md) lists every relationship between tables and what is not yet covered:
 
 - **One shared course per stay** - Vitals, respiratory support, continuous medications and labs all observe the same hidden hourly course (`synthetic_clif/physiology/`), so they agree with each other:
   - MAP comes from the same SBP/DBP reading (about DBP + pulse pressure / 3)
