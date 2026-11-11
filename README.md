@@ -4,15 +4,23 @@ Generate synthetic [CLIF (Common Longitudinal ICU Format)](https://clif-consorti
 
 ## Quick Start: Download the Pre-generated Dataset
 
-A pre-generated dataset with **10,000 hospitalizations** (~33 million rows across 28 tables) is available as a GitHub Release asset. The v0.6.0 release holds CLIF 2.1.0 tables; releases built after CLIF 3.0.0 became the default hold 3.0.0 tables.
+A pre-generated dataset with **10,000 hospitalizations** (~33 million rows across 28 tables) is attached to each GitHub Release. While sites move from CLIF 2.1.0 to 3.0.0, each release from v0.8.0 on carries both versions, built from the same seed so IDs match:
+
+- `synth_clif_10k.tar.gz`: CLIF 3.0.0 tables
+- `synth_clif_10k_clif2.1.tar.gz`: CLIF 2.1.0 tables
 
 ```bash
-# Download and extract (requires GitHub CLI)
-gh release download v0.6.0 -R AartikSarma/synthetic_clif -p "synth_clif_10k.tar.gz"
+# Download and extract the latest release (requires GitHub CLI)
+gh release download -R AartikSarma/synthetic_clif -p "synth_clif_10k.tar.gz"
 mkdir -p synth_clif_10k && tar -xzf synth_clif_10k.tar.gz -C synth_clif_10k
 
+# CLIF 2.1.0 instead
+gh release download -R AartikSarma/synthetic_clif -p "synth_clif_10k_clif2.1.tar.gz"
+mkdir -p synth_clif_10k_v21 && tar -xzf synth_clif_10k_clif2.1.tar.gz -C synth_clif_10k_v21
+
 # Or download directly
-curl -L https://github.com/AartikSarma/synthetic_clif/releases/download/v0.6.0/synth_clif_10k.tar.gz | tar -xz -C synth_clif_10k
+mkdir -p synth_clif_10k
+curl -L https://github.com/AartikSarma/synthetic_clif/releases/latest/download/synth_clif_10k.tar.gz | tar -xz -C synth_clif_10k
 ```
 
 Then load in Python:
@@ -226,7 +234,7 @@ To create a new release with an updated dataset:
 gh release create v0.x.0 --title "v0.x.0 - description" --notes "Release notes"
 ```
 
-The release-dataset workflow will automatically generate the 10K dataset and attach it as `synth_clif_10k.tar.gz`.
+The release-dataset workflow generates the 10K dataset in CLIF 3.0.0 and 2.1.0, in parallel, and attaches them as `synth_clif_10k.tar.gz` and `synth_clif_10k_clif2.1.tar.gz`. To rebuild the archives for an existing release, run `gh workflow run release-dataset.yml -f tag=v0.x.0`.
 
 ## License
 

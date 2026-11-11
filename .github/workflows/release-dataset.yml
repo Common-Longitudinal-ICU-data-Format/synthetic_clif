@@ -1,16 +1,41 @@
 name: Release Dataset
 
+# Builds the 10K dataset once per CLIF version and attaches both archives to
+# the release. synth_clif_10k.tar.gz keeps its name (CLIF 3.0.0, the default)
+# so existing download links still work; synth_clif_10k_clif2.1.tar.gz holds
+# CLIF 2.1.0 tables from the same seed, so IDs match across the two archives.
+#
+# Run it by hand (Actions > Release Dataset > Run workflow) to rebuild the
+# archives for an existing release tag.
+
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build and upload to (e.g. v0.8.0)"
+        required: true
 
 jobs:
   generate-and-upload:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - clif_version: "3.0"
+            archive_name: synth_clif_10k.tar.gz
+          - clif_version: "2.1"
+            archive_name: synth_clif_10k_clif2.1.tar.gz
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -25,7 +50,7 @@ jobs:
       - name: Run tests
         run: pytest tests/ -v
 
-      - name: Generate 10K dataset
+      - name: Generate 10K dataset (CLIF ${{ matrix.clif_version }})
         run: |
           python -c "
           from synthetic_clif.generators.dataset import SyntheticCLIFDataset
@@ -37,6 +62,7 @@ jobs:
               seed=42,
               include_concept_tables=True,
               workers=10,
+              clif_version='${{ matrix.clif_version }}',
           )
           dataset.generate()
           dataset.to_parquet(Path('synth_clif_10k'))
@@ -46,13 +72,13 @@ jobs:
       - name: Package dataset
         run: |
           cd synth_clif_10k
-          tar -czf ../synth_clif_10k.tar.gz *.parquet
+          tar -czf "../${{ matrix.archive_name }}" *.parquet
           cd ..
 
       - name: Upload to release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "${{ github.event.release.tag_name }}" \
-            synth_clif_10k.tar.gz \
+          gh release upload "$RELEASE_TAG" \
+            "${{ matrix.archive_name }}" \
             --clobber
