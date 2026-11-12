@@ -1,5 +1,73 @@
 # Changelog
 
+## Unreleased: validation tests that fail on bad data (#53)
+
+Before this change the clifpy tests filtered errors on type names clifpy no
+longer uses, so they matched nothing and passed whatever the data looked
+like. Nothing checked keys, timestamps, impossible values or units.
+
+Now the tests fail when the output breaks the CLIF rules, and fixing what
+they found changed some of the generated data.
+
+### New checks
+
+`synthetic_clif.validation.check_dataset(tables, clif_version)` returns a
+list of issues (empty means the dataset passed). It runs on 2.1 and 3.0
+output and uses the rules of the consortium validator clifpy, vendored in
+`synthetic_clif/validation/clif_rules.json` (rebuild with
+`tools/build_clif_rules.py`):
+
+- `schema` (3.0): columns, dtypes, vocabularies, category groups.
+- `primary_key`: duplicate rows on a table's key.
+- `foreign_key`: ids that point at nothing, and patient_id that disagrees
+  with the hospitalization.
+- `chronology`: an end before its start (admission and discharge, ADT in
+  and out, lab order, collect and result, any `*start*`/`*end*` pair).
+- `overlap`: overlapping ADT stays or hospitalizations of one patient.
+- `stay_window`: a timestamp outside its stay, or after death.
+- `value_range`: a number outside clifpy's outlier range for its category.
+- `units`: a lab unit that is not the CLIF unit, or a continuous medication
+  dose that is not a rate.
+- `death`: an expired discharge with no matching death time.
+- `never_charted`: a required setting (say, high flow liter flow) missing
+  from every row of that device.
+
+`tests/test_integrity.py` runs every check on both versions, injects one
+error of each kind to show the check catches it, and asserts the range rules
+cover the generated values. The clifpy tests now use a fixed error filter
+(`tests/clifpy_errors.py`) and a test that injects errors into it, so a
+future clifpy rename fails loudly. The 3.0 validator now checks every dtype,
+and 3.0 conversion raises instead of turning uncastable values into nulls.
+
+New tables are covered by the generic checks (ids, `*_dttm` columns,
+start/end pairs) with no change; table-specific rules go in the `EXTRA_*`
+settings in `synthetic_clif/validation/integrity.py`.
+
+### Changes users will notice
+
+- 2.1 `ecmo_mcs` columns now match the CLIF 2.1 schema: `device_metric_name`,
+  `device_rate`, `sweep`, `flow`, `fdO2` (was `control_parameter_name`,
+  `control_parameter_value`, `sweep_set`, `fdO2_set`).
+- 2.1 troponin I is reported in ng/L, the CLIF unit (values x1000).
+- High flow nasal cannula flow is in `lpm_set`, not `flow_rate_set`.
+- CPAP and NIPPV rows now record observed respiratory rate and tidal volume.
+
+### Fixes found by the new checks
+
+- Overlapping ADT stays when an ICU stay followed a stepdown stay.
+- Readmissions that started before the previous discharge.
+- Labs collected after discharge or death; 3.0 labs ordered before
+  admission; duplicate 2.1 lab rows on the same key.
+- Microbiology collected after discharge.
+- Medication orders written before admission.
+- CRRT blood flow below 150 mL/min.
+
+### Not yet covered
+
+- Medication dose ranges: clifpy has ranges for about half the doses
+  generated; the rest are checked for unit kind only.
+- 3.0 tables not yet generated get only the generic checks once they are.
+
 ## Unreleased: one shared hospital course (PR #60)
 
 Before this change each table drew its own values. MAP was generated

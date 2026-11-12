@@ -1,0 +1,2401 @@
+{
+ "outlier_ranges": {
+  "adt": {},
+  "crrt_therapy": {
+   "blood_flow_rate": {
+    "max": 300,
+    "min": 150
+   },
+   "dialysate_flow_rate": {
+    "max": 10000,
+    "min": 0
+   },
+   "post_filter_replacement_fluid_rate": {
+    "max": 10000,
+    "min": 0
+   },
+   "pre_filter_replacement_fluid_rate": {
+    "max": 10000,
+    "min": 0
+   },
+   "ultrafiltration_out": {
+    "max": 500,
+    "min": 0
+   }
+  },
+  "ecmo_mcs": {
+   "fdO2": {
+    "LAVA_ECMO": {
+     "max": 1.0,
+     "min": 0.21
+    },
+    "VAV_ECMO": {
+     "max": 1.0,
+     "min": 0.21
+    },
+    "VA_ECMO": {
+     "max": 1.0,
+     "min": 0.21
+    },
+    "VV_ECMO": {
+     "max": 1.0,
+     "min": 0.21
+    }
+   },
+   "flow": {
+    "CentriMag_LV": {
+     "max": 10.0,
+     "min": 0.5
+    },
+    "CentriMag_RV": {
+     "max": 10.0,
+     "min": 0.5
+    },
+    "HMII": {
+     "max": 10.0,
+     "min": 1.0
+    },
+    "HMIII": {
+     "max": 10.0,
+     "min": 1.0
+    },
+    "HeartWare": {
+     "max": 10.0,
+     "min": 1.0
+    },
+    "Impella_2.5": {
+     "max": 10.0,
+     "min": 0.5
+    },
+    "Impella_5.0": {
+     "max": 10.0,
+     "min": 0.5
+    },
+    "Impella_5.5": {
+     "max": 10.0,
+     "min": 0.5
+    },
+    "Impella_CP": {
+     "max": 10.0,
+     "min": 0.5
+    },
+    "Impella_LD": {
+     "max": 10.0,
+     "min": 0.5
+    },
+    "Impella_RP": {
+     "max": 10.0,
+     "min": 0.5
+    },
+    "Impella_RP_Flex": {
+     "max": 10.0,
+     "min": 0.5
+    },
+    "LAVA_ECMO": {
+     "max": 10.0,
+     "min": 1.0
+    },
+    "TandemHeart_LV": {
+     "max": 10.0,
+     "min": 0.5
+    },
+    "TandemHeart_RV": {
+     "max": 10.0,
+     "min": 0.5
+    },
+    "VAV_ECMO": {
+     "max": 10.0,
+     "min": 1.0
+    },
+    "VA_ECMO": {
+     "max": 10.0,
+     "min": 1.0
+    },
+    "VV_ECMO": {
+     "max": 10.0,
+     "min": 1.0
+    }
+   },
+   "sweep": {
+    "LAVA_ECMO": {
+     "max": 20.0,
+     "min": 0.5
+    },
+    "VAV_ECMO": {
+     "max": 20.0,
+     "min": 0.5
+    },
+    "VA_ECMO": {
+     "max": 20.0,
+     "min": 0.5
+    },
+    "VV_ECMO": {
+     "max": 20.0,
+     "min": 0.5
+    }
+   }
+  },
+  "hospitalization": {
+   "age_at_admission": {
+    "max": 120,
+    "min": 0
+   }
+  },
+  "labs": {
+   "lab_value_numeric": {
+    "albumin": {
+     "max": 15.0,
+     "min": 0.0
+    },
+    "alkaline_phosphatase": {
+     "max": 5000,
+     "min": 0
+    },
+    "alt": {
+     "max": 20000,
+     "min": 0
+    },
+    "ast": {
+     "max": 20000,
+     "min": 0
+    },
+    "basophils_absolute": {
+     "max": 50.0,
+     "min": 0.0
+    },
+    "basophils_percent": {
+     "max": 100.0,
+     "min": 0.0
+    },
+    "bicarbonate": {
+     "max": 50.0,
+     "min": 0.0
+    },
+    "bilirubin_conjugated": {
+     "max": 50.0,
+     "min": 0.0
+    },
+    "bilirubin_total": {
+     "max": 80.0,
+     "min": 0.0
+    },
+    "bilirubin_unconjugated": {
+     "max": 50.0,
+     "min": 0.0
+    },
+    "bun": {
+     "max": 250.0,
+     "min": 0.0
+    },
+    "calcium_ionized": {
+     "max": 20.0,
+     "min": 0.0
+    },
+    "calcium_total": {
+     "max": 20.0,
+     "min": 0.0
+    },
+    "chloride": {
+     "max": 140.0,
+     "min": 50.0
+    },
+    "creatinine": {
+     "max": 20.0,
+     "min": 0.0
+    },
+    "crp": {
+     "max": 1000.0,
+     "min": 0.0
+    },
+    "eosinophils_absolute": {
+     "max": 50.0,
+     "min": 0.0
+    },
+    "eosinophils_percent": {
+     "max": 100.0,
+     "min": 0.0
+    },
+    "esr": {
+     "max": 1000,
+     "min": 0
+    },
+    "ferritin": {
+     "max": 300000.0,
+     "min": 0.0
+    },
+    "glucose_fingerstick": {
+     "max": 2000.0,
+     "min": 0.0
+    },
+    "glucose_serum": {
+     "max": 2000.0,
+     "min": 0.0
+    },
+    "hemoglobin": {
+     "max": 25.0,
+     "min": 2.0
+    },
+    "inr": {
+     "max": 15.0,
+     "min": 0.0
+    },
+    "lactate": {
+     "max": 30.0,
+     "min": 0.0
+    },
+    "ldh": {
+     "max": 10000,
+     "min": 0
+    },
+    "lymphocytes_absolute": {
+     "max": 50.0,
+     "min": 0.0
+    },
+    "lymphocytes_percent": {
+     "max": 100.0,
+     "min": 0.0
+    },
+    "magnesium": {
+     "max": 10.0,
+     "min": 0.0
+    },
+    "monocytes_absolute": {
+     "max": 50.0,
+     "min": 0.0
+    },
+    "monocytes_percent": {
+     "max": 100.0,
+     "min": 0.0
+    },
+    "neutrophils_absolute": {
+     "max": 50.0,
+     "min": 0.0
+    },
+    "neutrophils_percent": {
+     "max": 100.0,
+     "min": 0.0
+    },
+    "pco2_arterial": {
+     "max": 250.0,
+     "min": 0.0
+    },
+    "pco2_venous": {
+     "max": 250.0,
+     "min": 0.0
+    },
+    "ph_arterial": {
+     "max": 10.0,
+     "min": 6.0
+    },
+    "ph_venous": {
+     "max": 10.0,
+     "min": 5.0
+    },
+    "phosphate": {
+     "max": 15.0,
+     "min": 0.0
+    },
+    "platelet_count": {
+     "max": 2000.0,
+     "min": 0.0
+    },
+    "po2_arterial": {
+     "max": 700.0,
+     "min": 0.0
+    },
+    "potassium": {
+     "max": 15.0,
+     "min": 0.0
+    },
+    "procalcitonin": {
+     "max": 1000.0,
+     "min": 0.0
+    },
+    "pt": {
+     "max": 200.0,
+     "min": 1.0
+    },
+    "ptt": {
+     "max": 200.0,
+     "min": 1.0
+    },
+    "so2_arterial": {
+     "max": 100.0,
+     "min": 0.0
+    },
+    "so2_central_venous": {
+     "max": 100.0,
+     "min": 0.0
+    },
+    "so2_mixed_venous": {
+     "max": 100.0,
+     "min": 0.0
+    },
+    "sodium": {
+     "max": 210.0,
+     "min": 90.0
+    },
+    "total_protein": {
+     "max": 20.0,
+     "min": 0.0
+    },
+    "troponin_i": {
+     "max": 10000.0,
+     "min": 0.0
+    },
+    "troponin_t": {
+     "max": 10000.0,
+     "min": 0.0
+    },
+    "wbc": {
+     "max": 500.0,
+     "min": 0.0
+    }
+   }
+  },
+  "medication_admin_continuous": {
+   "med_dose": {
+    "cisatracurium": {
+     "mcg/kg/min": {
+      "max": 10.0,
+      "min": 0.0
+     },
+     "mg/hr": {
+      "max": 20.0,
+      "min": 0.0
+     }
+    },
+    "dexmedetomidine": {
+     "mcg/hr": {
+      "max": 200.0,
+      "min": 0.0
+     },
+     "mcg/kg/hr": {
+      "max": 2.4,
+      "min": 0.0
+     }
+    },
+    "dobutamine": {
+     "mcg/kg/min": {
+      "max": 20.0,
+      "min": 0.0
+     },
+     "mg/hr": {
+      "max": 50.0,
+      "min": 0.0
+     }
+    },
+    "dopamine": {
+     "mcg/kg/min": {
+      "max": 50.0,
+      "min": 0.0
+     },
+     "mg/hr": {
+      "max": 100.0,
+      "min": 0.0
+     }
+    },
+    "epinephrine": {
+     "mcg/kg/min": {
+      "max": 2.0,
+      "min": 0.0
+     },
+     "mcg/min": {
+      "max": 100.0,
+      "min": 0.0
+     },
+     "mg/hr": {
+      "max": 5.0,
+      "min": 0.0
+     }
+    },
+    "fentanyl": {
+     "mcg/hr": {
+      "max": 500.0,
+      "min": 0.0
+     },
+     "mcg/kg/hr": {
+      "max": 10.0,
+      "min": 0.0
+     },
+     "mg/hr": {
+      "max": 1.0,
+      "min": 0.0
+     }
+    },
+    "ketamine": {
+     "mcg/kg/min": {
+      "max": 50.0,
+      "min": 0.0
+     },
+     "mg/hr": {
+      "max": 20.0,
+      "min": 0.0
+     },
+     "mg/kg/hr": {
+      "max": 5.0,
+      "min": 0.0
+     }
+    },
+    "lorazepam": {
+     "mcg/kg/min": {
+      "max": 5.0,
+      "min": 0.0
+     },
+     "mg/hr": {
+      "max": 10.0,
+      "min": 0.0
+     }
+    },
+    "midazolam": {
+     "mcg/kg/min": {
+      "max": 10.0,
+      "min": 0.0
+     },
+     "mg/hr": {
+      "max": 20.0,
+      "min": 0.0
+     }
+    },
+    "milrinone": {
+     "mcg/kg/min": {
+      "max": 1.0,
+      "min": 0.0
+     },
+     "mg/hr": {
+      "max": 2.0,
+      "min": 0.0
+     }
+    },
+    "norepinephrine": {
+     "mcg/kg/min": {
+      "max": 3.0,
+      "min": 0.0
+     },
+     "mcg/min": {
+      "max": 200.0,
+      "min": 0.0
+     },
+     "mg/hr": {
+      "max": 10.0,
+      "min": 0.0
+     }
+    },
+    "pentobarbital": {
+     "mg/hr": {
+      "max": 50.0,
+      "min": 0.0
+     },
+     "mg/kg/hr": {
+      "max": 10.0,
+      "min": 0.0
+     }
+    },
+    "phenylephrine": {
+     "mcg/kg/min": {
+      "max": 10.0,
+      "min": 0.0
+     },
+     "mcg/min": {
+      "max": 500.0,
+      "min": 0.0
+     },
+     "mg/hr": {
+      "max": 20.0,
+      "min": 0.0
+     }
+    },
+    "propofol": {
+     "mcg/kg/min": {
+      "max": 200.0,
+      "min": 0.0
+     },
+     "mg/hr": {
+      "max": 400.0,
+      "min": 0.0
+     },
+     "mg/kg/hr": {
+      "max": 10.0,
+      "min": 0.0
+     }
+    },
+    "remifentanil": {
+     "mcg/hr": {
+      "max": 100.0,
+      "min": 0.0
+     },
+     "mcg/kg/min": {
+      "max": 2.0,
+      "min": 0.0
+     }
+    },
+    "rocuronium": {
+     "mcg/kg/min": {
+      "max": 20.0,
+      "min": 0.0
+     },
+     "mg/hr": {
+      "max": 50.0,
+      "min": 0.0
+     }
+    },
+    "vasopressin": {
+     "units/hr": {
+      "max": 6.0,
+      "min": 0.0
+     },
+     "units/min": {
+      "max": 0.1,
+      "min": 0.0
+     }
+    },
+    "vecuronium": {
+     "mcg/kg/min": {
+      "max": 5.0,
+      "min": 0.0
+     },
+     "mg/hr": {
+      "max": 10.0,
+      "min": 0.0
+     }
+    }
+   }
+  },
+  "medication_admin_intermittent": {
+   "med_dose": {
+    "fentanyl": {
+     "mcg": {
+      "max": 500.0,
+      "min": 0.0
+     }
+    },
+    "hydromorphone": {
+     "mg": {
+      "max": 4.0,
+      "min": 0.0
+     }
+    },
+    "lorazepam": {
+     "mg": {
+      "max": 10.0,
+      "min": 0.0
+     }
+    },
+    "midazolam": {
+     "mg": {
+      "max": 20.0,
+      "min": 0.0
+     }
+    },
+    "propofol": {
+     "mg": {
+      "max": 400.0,
+      "min": 0.0
+     }
+    }
+   }
+  },
+  "patient": {},
+  "patient_assessments": {
+   "numerical_value": {
+    "AMS": {
+     "max": 5,
+     "min": 0
+    },
+    "AM_PAC": {
+     "max": 30,
+     "min": 0
+    },
+    "APGAR": {
+     "max": 10,
+     "min": 0
+    },
+    "AVPU": {
+     "max": 4,
+     "min": 0
+    },
+    "BPS": {
+     "max": 12,
+     "min": 0
+    },
+    "CIWA": {
+     "max": 67,
+     "min": 0
+    },
+    "COWS": {
+     "max": 48,
+     "min": 0
+    },
+    "DVPRS": {
+     "max": 10,
+     "min": 0
+    },
+    "ICANS": {
+     "max": 4,
+     "min": 0
+    },
+    "ICSDC": {
+     "max": 8,
+     "min": 0
+    },
+    "IMS": {
+     "max": 5,
+     "min": 0
+    },
+    "MINDS": {
+     "max": 10,
+     "min": 0
+    },
+    "Morse Fall Scale": {
+     "max": 125,
+     "min": 0
+    },
+    "NRS": {
+     "max": 10,
+     "min": 0
+    },
+    "NVPS": {
+     "max": 10,
+     "min": 0
+    },
+    "PAINAD": {
+     "max": 10,
+     "min": 0
+    },
+    "RASS": {
+     "max": 4,
+     "min": -5
+    },
+    "SAS": {
+     "max": 7,
+     "min": 1
+    },
+    "TOF": {
+     "max": 4,
+     "min": 0
+    },
+    "VAS": {
+     "max": 10,
+     "min": 0
+    },
+    "WAT": {
+     "max": 12,
+     "min": 0
+    },
+    "braden_activity": {
+     "max": 4,
+     "min": 1
+    },
+    "braden_friction": {
+     "max": 3,
+     "min": 1
+    },
+    "braden_mobility": {
+     "max": 4,
+     "min": 1
+    },
+    "braden_moisture": {
+     "max": 4,
+     "min": 1
+    },
+    "braden_nutrition": {
+     "max": 4,
+     "min": 1
+    },
+    "braden_sensory": {
+     "max": 4,
+     "min": 1
+    },
+    "braden_total": {
+     "max": 23,
+     "min": 6
+    },
+    "cam_inattention": {
+     "max": 2,
+     "min": 0
+    },
+    "cam_loc": {
+     "max": 2,
+     "min": 0
+    },
+    "cam_mental": {
+     "max": 2,
+     "min": 0
+    },
+    "cam_thinking": {
+     "max": 2,
+     "min": 0
+    },
+    "cam_total": {
+     "max": 8,
+     "min": 0
+    },
+    "cpot_body": {
+     "max": 2,
+     "min": 0
+    },
+    "cpot_facial": {
+     "max": 2,
+     "min": 0
+    },
+    "cpot_muscle": {
+     "max": 2,
+     "min": 0
+    },
+    "cpot_total": {
+     "max": 8,
+     "min": 0
+    },
+    "cpot_vocalization": {
+     "max": 2,
+     "min": 0
+    },
+    "gcs_eye": {
+     "max": 4,
+     "min": 1
+    },
+    "gcs_motor": {
+     "max": 6,
+     "min": 1
+    },
+    "gcs_total": {
+     "max": 15,
+     "min": 3
+    },
+    "gcs_verbal": {
+     "max": 5,
+     "min": 1
+    },
+    "icsdc_agitation": {
+     "max": 4,
+     "min": 0
+    },
+    "icsdc_disorientation": {
+     "max": 4,
+     "min": 0
+    },
+    "icsdc_hallucination": {
+     "max": 4,
+     "min": 0
+    },
+    "icsdc_inattention": {
+     "max": 4,
+     "min": 0
+    },
+    "icsdc_loc": {
+     "max": 5,
+     "min": 0
+    },
+    "icsdc_sleep": {
+     "max": 4,
+     "min": 0
+    },
+    "icsdc_speech": {
+     "max": 4,
+     "min": 0
+    },
+    "icsdc_symptoms": {
+     "max": 4,
+     "min": 0
+    },
+    "icsdc_total": {
+     "max": 32,
+     "min": 0
+    },
+    "sat_delivery_pass_fail": {
+     "max": 1,
+     "min": 0
+    },
+    "sat_escalating_sedation": {
+     "max": 1,
+     "min": 0
+    },
+    "sat_intracranial_pressure": {
+     "max": 1,
+     "min": 0
+    },
+    "sat_myocardial_ischemia": {
+     "max": 1,
+     "min": 0
+    },
+    "sat_neuromuscular_blockers": {
+     "max": 1,
+     "min": 0
+    },
+    "sat_screen_pass_fail": {
+     "max": 1,
+     "min": 0
+    },
+    "sat_sedative_infusion": {
+     "max": 1,
+     "min": 0
+    },
+    "sbt_agitation": {
+     "max": 1,
+     "min": 0
+    },
+    "sbt_delivery_pass_fail": {
+     "max": 1,
+     "min": 0
+    },
+    "sbt_fail_reason": {
+     "max": 1,
+     "min": 0
+    },
+    "sbt_inadequate_oxygenation": {
+     "max": 1,
+     "min": 0
+    },
+    "sbt_intracranial_pressure": {
+     "max": 1,
+     "min": 0
+    },
+    "sbt_no_spontaneous_effort": {
+     "max": 1,
+     "min": 0
+    },
+    "sbt_screen_pass_fail": {
+     "max": 1,
+     "min": 0
+    },
+    "sbt_vasopressor_use": {
+     "max": 1,
+     "min": 0
+    }
+   }
+  },
+  "position": {},
+  "respiratory_support": {
+   "fio2_set": {
+    "max": 1.0,
+    "min": 0.21
+   },
+   "flow_rate_set": {
+    "max": 100.0,
+    "min": -50.0
+   },
+   "inspiratory_time_set": {
+    "max": 50.0,
+    "min": -1.0
+   },
+   "lpm_set": {
+    "max": 60.0,
+    "min": 0.0
+   },
+   "mean_airway_pressure_obs": {
+    "max": 50.0,
+    "min": 0.0
+   },
+   "minute_vent_obs": {
+    "max": 40.0,
+    "min": 0.0
+   },
+   "peak_inspiratory_pressure_obs": {
+    "max": 100.0,
+    "min": -50.0
+   },
+   "peak_inspiratory_pressure_set": {
+    "max": 100.0,
+    "min": -50.0
+   },
+   "peep_obs": {
+    "max": 50.0,
+    "min": 0.0
+   },
+   "peep_set": {
+    "max": 30.0,
+    "min": 0.0
+   },
+   "plateau_pressure_obs": {
+    "max": 100.0,
+    "min": 0.0
+   },
+   "pressure_control_set": {
+    "max": 50.0,
+    "min": -50.0
+   },
+   "pressure_support_set": {
+    "max": 50.0,
+    "min": -50.0
+   },
+   "resp_rate_obs": {
+    "max": 200,
+    "min": 0
+   },
+   "resp_rate_set": {
+    "max": 200,
+    "min": 0
+   },
+   "tidal_volume_obs": {
+    "max": 3000.0,
+    "min": 100.0
+   },
+   "tidal_volume_set": {
+    "max": 3000.0,
+    "min": 100.0
+   }
+  },
+  "vitals": {
+   "vital_value": {
+    "dbp": {
+     "max": 200,
+     "min": 0
+    },
+    "heart_rate": {
+     "max": 300,
+     "min": 0
+    },
+    "height_cm": {
+     "max": 255,
+     "min": 76
+    },
+    "map": {
+     "max": 250,
+     "min": 0
+    },
+    "respiratory_rate": {
+     "max": 60,
+     "min": 0
+    },
+    "sbp": {
+     "max": 300,
+     "min": 0
+    },
+    "spo2": {
+     "max": 100,
+     "min": 50
+    },
+    "temp_c": {
+     "max": 44,
+     "min": 32
+    },
+    "weight_kg": {
+     "max": 1100,
+     "min": 30
+    }
+   }
+  }
+ },
+ "rules": {
+  "chronological_order": {
+   "adt": [
+    {
+     "description": "ADT in_dttm must be strictly before out_dttm",
+     "earlier": "in_dttm",
+     "later": "out_dttm",
+     "strict": true
+    }
+   ],
+   "hospitalization": [
+    {
+     "description": "Admission must be strictly before discharge",
+     "earlier": "admission_dttm",
+     "later": "discharge_dttm",
+     "strict": true
+    }
+   ],
+   "labs": [
+    {
+     "description": "Lab order must be before or equal to collection",
+     "earlier": "lab_order_dttm",
+     "later": "lab_collect_dttm"
+    },
+    {
+     "description": "Lab collection must be before or equal to result",
+     "earlier": "lab_collect_dttm",
+     "later": "lab_result_dttm"
+    }
+   ],
+   "microbiology_culture": [
+    {
+     "description": "Culture order must be before or equal to collection",
+     "earlier": "order_dttm",
+     "later": "collect_dttm"
+    },
+    {
+     "description": "Culture collection must be before or equal to result",
+     "earlier": "collect_dttm",
+     "later": "result_dttm"
+    }
+   ],
+   "microbiology_nonculture": [
+    {
+     "description": "Nonculture order must be before or equal to collection",
+     "earlier": "order_dttm",
+     "later": "collect_dttm"
+    },
+    {
+     "description": "Nonculture collection must be before or equal to result",
+     "earlier": "collect_dttm",
+     "later": "result_dttm"
+    }
+   ]
+  },
+  "composite_keys": {
+   "adt": {
+    "keys": [
+     "hospitalization_id",
+     "in_dttm"
+    ]
+   },
+   "hospital_diagnosis": {
+    "keys": [
+     "hospitalization_id",
+     "diagnosis_code"
+    ]
+   },
+   "hospitalization": {
+    "keys": [
+     "hospitalization_id"
+    ]
+   },
+   "labs": {
+    "keys": [
+     "hospitalization_id",
+     "lab_collect_dttm",
+     "lab_category"
+    ]
+   },
+   "medication_admin_continuous": {
+    "keys": [
+     "hospitalization_id",
+     "admin_dttm",
+     "med_category",
+     "mar_action_category"
+    ]
+   },
+   "medication_admin_intermittent": {
+    "keys": [
+     "hospitalization_id",
+     "admin_dttm",
+     "med_category",
+     "mar_action_category"
+    ]
+   },
+   "microbiology_culture": {
+    "keys": [
+     "hospitalization_id",
+     "collect_dttm",
+     "organism_category",
+     "result_dttm"
+    ]
+   },
+   "microbiology_susceptibility": {
+    "keys": [
+     "organism_id",
+     "antimicrobial_category"
+    ]
+   },
+   "patient": {
+    "keys": [
+     "patient_id"
+    ]
+   },
+   "patient_assessments": {
+    "keys": [
+     "hospitalization_id",
+     "recorded_dttm",
+     "assessment_category"
+    ]
+   },
+   "patient_procedures": {
+    "keys": [
+     "hospitalization_id",
+     "procedure_billed_dttm",
+     "procedure_code"
+    ]
+   },
+   "position": {
+    "keys": [
+     "hospitalization_id",
+     "recorded_dttm"
+    ]
+   },
+   "respiratory_support": {
+    "keys": [
+     "hospitalization_id",
+     "recorded_dttm"
+    ]
+   },
+   "vitals": {
+    "keys": [
+     "hospitalization_id",
+     "recorded_dttm",
+     "vital_category"
+    ]
+   }
+  },
+  "conditional_requirements": {
+   "adt": [
+    {
+     "description": "ICU locations must have location_type specified",
+     "then_required": [
+      "location_type"
+     ],
+     "when_column": "location_category",
+     "when_value": [
+      "icu"
+     ]
+    }
+   ],
+   "crrt_therapy": [
+    {
+     "description": "CVVH and CVVHDF modes require pre- and post-filter replacement fluid rates",
+     "then_required": [
+      "pre_filter_replacement_fluid_rate",
+      "post_filter_replacement_fluid_rate"
+     ],
+     "when_column": "crrt_mode_category",
+     "when_value": [
+      "cvvh",
+      "cvvhdf"
+     ]
+    },
+    {
+     "description": "CVVHD and CVVHDF modes require dialysate flow rate",
+     "then_required": [
+      "dialysate_flow_rate"
+     ],
+     "when_column": "crrt_mode_category",
+     "when_value": [
+      "cvvhd",
+      "cvvhdf"
+     ]
+    }
+   ],
+   "respiratory_support": [
+    {
+     "description": "IMV/NIPPV must have mode_category specified",
+     "then_required": [
+      "mode_category"
+     ],
+     "when_column": "device_category",
+     "when_value": [
+      "IMV",
+      "NIPPV"
+     ]
+    },
+    {
+     "description": "CPAP requires fio2_set, peep_set settings and tidal_volume_obs, resp_rate_obs observations",
+     "then_required": [
+      "fio2_set",
+      "peep_set",
+      "tidal_volume_obs",
+      "resp_rate_obs"
+     ],
+     "when_column": "device_category",
+     "when_value": [
+      "CPAP"
+     ]
+    },
+    {
+     "description": "Face Mask requires lpm_set",
+     "then_required": [
+      "lpm_set"
+     ],
+     "when_column": "device_category",
+     "when_value": [
+      "Face Mask"
+     ]
+    },
+    {
+     "description": "High Flow NC requires fio2_set and lpm_set",
+     "then_required": [
+      "fio2_set",
+      "lpm_set"
+     ],
+     "when_column": "device_category",
+     "when_value": [
+      "High Flow NC"
+     ]
+    },
+    {
+     "description": "Nasal Cannula requires lpm_set",
+     "then_required": [
+      "lpm_set"
+     ],
+     "when_column": "device_category",
+     "when_value": [
+      "Nasal Cannula"
+     ]
+    },
+    {
+     "description": "Trach Collar requires lpm_set and fio2_set",
+     "then_required": [
+      "lpm_set",
+      "fio2_set"
+     ],
+     "when_column": "device_category",
+     "when_value": [
+      "Trach Collar"
+     ]
+    },
+    {
+     "and_column": "mode_category",
+     "and_value": [
+      "Volume Support"
+     ],
+     "description": "NIPPV Volume Support requires fio2_set, peep_set, tidal_volume_set, resp_rate_set, and inspiratory_time_set",
+     "then_required": [
+      "fio2_set",
+      "peep_set",
+      "tidal_volume_set",
+      "resp_rate_set",
+      "inspiratory_time_set"
+     ],
+     "when_column": "device_category",
+     "when_value": [
+      "NIPPV"
+     ]
+    },
+    {
+     "and_column": "mode_category",
+     "and_value": [
+      "Pressure Support/CPAP"
+     ],
+     "description": "NIPPV PS/CPAP requires fio2_set, peep_set, peak_inspiratory_pressure_set, resp_rate_set, and inspiratory_time_set",
+     "then_required": [
+      "fio2_set",
+      "peep_set",
+      "peak_inspiratory_pressure_set",
+      "resp_rate_set",
+      "inspiratory_time_set"
+     ],
+     "when_column": "device_category",
+     "when_value": [
+      "NIPPV"
+     ]
+    },
+    {
+     "description": "IMV requires fio2_set and peep_set for all modes",
+     "then_required": [
+      "fio2_set",
+      "peep_set"
+     ],
+     "when_column": "device_category",
+     "when_value": [
+      "IMV"
+     ]
+    },
+    {
+     "and_column": "mode_category",
+     "and_value": [
+      "Assist Control-Volume Control"
+     ],
+     "description": "IMV Assist Control-Volume Control requires tidal_volume_set and resp_rate_set",
+     "then_required": [
+      "tidal_volume_set",
+      "resp_rate_set"
+     ],
+     "when_column": "device_category",
+     "when_value": [
+      "IMV"
+     ]
+    },
+    {
+     "and_column": "mode_category",
+     "and_value": [
+      "Pressure Support/CPAP"
+     ],
+     "description": "IMV Pressure Support/CPAP requires pressure_support_set",
+     "then_required": [
+      "pressure_support_set"
+     ],
+     "when_column": "device_category",
+     "when_value": [
+      "IMV"
+     ]
+    },
+    {
+     "and_column": "mode_category",
+     "and_value": [
+      "Pressure Control"
+     ],
+     "description": "IMV Pressure Control requires resp_rate_set, pressure_control_set, and inspiratory_time_set",
+     "then_required": [
+      "resp_rate_set",
+      "pressure_control_set",
+      "inspiratory_time_set"
+     ],
+     "when_column": "device_category",
+     "when_value": [
+      "IMV"
+     ]
+    },
+    {
+     "and_column": "mode_category",
+     "and_value": [
+      "Pressure-Regulated Volume Control"
+     ],
+     "description": "IMV PRVC requires tidal_volume_set and resp_rate_set",
+     "then_required": [
+      "tidal_volume_set",
+      "resp_rate_set"
+     ],
+     "when_column": "device_category",
+     "when_value": [
+      "IMV"
+     ]
+    },
+    {
+     "and_column": "mode_category",
+     "and_value": [
+      "SIMV"
+     ],
+     "description": "IMV SIMV requires resp_rate_set and pressure_support_set",
+     "then_required": [
+      "resp_rate_set",
+      "pressure_support_set"
+     ],
+     "when_column": "device_category",
+     "when_value": [
+      "IMV"
+     ]
+    },
+    {
+     "and_column": "mode_category",
+     "and_value": [
+      "Volume Support"
+     ],
+     "description": "IMV Volume Support requires tidal_volume_set",
+     "then_required": [
+      "tidal_volume_set"
+     ],
+     "when_column": "device_category",
+     "when_value": [
+      "IMV"
+     ]
+    }
+   ]
+  },
+  "cross_table_conditional_requirements": [
+   {
+    "check_type": "not_null",
+    "description": "Patients discharged as 'Expired' should have death_dttm in patient table",
+    "join_column": "patient_id",
+    "source_column": "discharge_category",
+    "source_table": "hospitalization",
+    "source_value": [
+     "Expired"
+    ],
+    "target_column": "death_dttm",
+    "target_table": "patient"
+   }
+  ],
+  "medication_dose_unit_rules": {
+   "medication_admin_continuous": {
+    "description": "Continuous med dose units must be rate-based (contain time denominator)",
+    "expect": "per_time"
+   },
+   "medication_admin_intermittent": {
+    "description": "Intermittent med dose units must be discrete (no time denominator)",
+    "expect": "discrete"
+   }
+  },
+  "overlapping_periods": {
+   "adt": {
+    "description": "ADT records for same hospitalization should not overlap",
+    "end_column": "out_dttm",
+    "entity_column": "hospitalization_id",
+    "start_column": "in_dttm"
+   }
+  },
+  "relational_integrity": {
+   "hospitalization_id": {
+    "references_table": "hospitalization"
+   },
+   "organism_id": {
+    "references_table": "microbiology_culture"
+   },
+   "patient_id": {
+    "references_table": "patient"
+   }
+  }
+ },
+ "source": "clifpy 2.1.0 schemas/validation_rules.yaml, outlier_config.yaml and per-version labs/vitals schemas",
+ "versions": {
+  "2.1": {
+   "allowed_unit_variants": {
+    "%": [
+     "%",
+     "percent",
+     "pct",
+     "pct."
+    ],
+    "(no units)": [
+     "(no units)",
+     "no units",
+     "none",
+     "unitless",
+     "ratio"
+    ],
+    "10^3/ul": [
+     "10^3/ul",
+     "10^3/µl",
+     "10^3/μl",
+     "10^3/μl",
+     "10*3/ul",
+     "10*3/µl",
+     "10*3/μl",
+     "10*3/μl",
+     "x10^3/ul",
+     "x10^3/µl",
+     "x10^3/μl",
+     "x10^3/μl",
+     "x10e3/ul",
+     "x10e3/µl",
+     "x10e3/μl",
+     "10e3/ul",
+     "10e3/µl",
+     "10e3/μl",
+     "k/ul",
+     "k/µl",
+     "k/μl",
+     "k/μl",
+     "k/mcl",
+     "thousand/ul",
+     "thousand/µl",
+     "thousand/μl",
+     "thousand/μl",
+     "thous/ul",
+     "thous/µl",
+     "thous/μl",
+     "thous/μl",
+     "k/cu mm",
+     "k/cumm",
+     "k/cu.mm",
+     "k/mm3",
+     "k/mm^3",
+     "x10^3/mm3",
+     "x10^3/mm^3",
+     "10^3/mm3",
+     "10^3/mm^3",
+     "10^9/l",
+     "10*9/l",
+     "x10^9/l",
+     "10e9/l"
+    ],
+    "cells/ul": [
+     "cells/ul",
+     "cells/µl",
+     "cells/μl",
+     "cells/μl",
+     "cells per microliter",
+     "cell/ul",
+     "cell/µl",
+     "cell/μl",
+     "cell/μl",
+     "/cu mm",
+     "/cumm",
+     "/mm3",
+     "/mm^3",
+     "per cu mm",
+     "per cumm",
+     "per mm3",
+     "per mm^3"
+    ],
+    "fraction": [
+     "decimal",
+     "fraction"
+    ],
+    "g/100ml": [
+     "g/100ml",
+     "g per 100ml",
+     "gram/100ml",
+     "grams/100ml",
+     "grams per 100ml",
+     "gm/100ml",
+     "gm per 100ml"
+    ],
+    "g/dl": [
+     "g/dl",
+     "g per dl",
+     "g/dl.",
+     "gram/dl",
+     "grams/dl",
+     "grams per deciliter",
+     "g per decilitre",
+     "g/deciliter",
+     "gm/dl"
+    ],
+    "g/l": [
+     "g/l",
+     "g per l",
+     "gram/l",
+     "grams/l",
+     "grams per liter",
+     "grams per litre",
+     "g/liter",
+     "g/litre",
+     "gm/l",
+     "gm per l"
+    ],
+    "kpa": [
+     "kpa",
+     "kilopascal",
+     "kilopascals"
+    ],
+    "meq/l": [
+     "meq/l",
+     "milliequivalents per liter"
+    ],
+    "mg/100ml": [
+     "mg/100ml",
+     "mg per 100ml"
+    ],
+    "mg/dl": [
+     "mg/dl",
+     "mg per dl",
+     "mg/dl.",
+     "milligrams per deciliter",
+     "milligrams per decilitre",
+     "mg per deciliter",
+     "mg per decilitre",
+     "mg.dl",
+     "mg_dl"
+    ],
+    "mg/l": [
+     "mg/l",
+     "mg per l",
+     "mg per liter",
+     "mg per litre",
+     "milligrams per liter",
+     "milligrams per litre",
+     "milligram per liter",
+     "milligram per litre",
+     "mg/l.",
+     "mg per l.",
+     "mg per liter.",
+     "mg per litre.",
+     "mg.l",
+     "mg.l.",
+     "mg_l",
+     "mg_l.",
+     "mg l^-1",
+     "mg l-1",
+     "mg l^-1",
+     "mg l-1"
+    ],
+    "min": [
+     "min",
+     "mins",
+     "minute",
+     "minutes"
+    ],
+    "mm/hour": [
+     "mm/hour",
+     "mm/hr",
+     "mm/h"
+    ],
+    "mmhg": [
+     "mmhg",
+     "mm hg",
+     "mm.hg",
+     "mm of hg",
+     "millimeters of mercury",
+     "millimetres of mercury"
+    ],
+    "mmol/l": [
+     "mmol/l",
+     "mmoles/l",
+     "millimoles per liter",
+     "millimoles per litre"
+    ],
+    "mol/l": [
+     "mol/l",
+     "moles per liter"
+    ],
+    "ng/dl": [
+     "ng/dl",
+     "ng per dl",
+     "nanograms per deciliter"
+    ],
+    "ng/l": [
+     "ng/l",
+     "ng per l",
+     "nanograms per liter"
+    ],
+    "ng/ml": [
+     "ng/ml",
+     "ng per ml",
+     "ng/ml.",
+     "nanograms per milliliter",
+     "nanograms per millilitre",
+     "ng per milliliter",
+     "ng per millilitre",
+     "ng.ml",
+     "ng_ml"
+    ],
+    "nmol/l": [
+     "nmol/l",
+     "nanomoles per liter"
+    ],
+    "pa": [
+     "pa",
+     "pascal"
+    ],
+    "pg/l": [
+     "pg/l",
+     "picograms per liter"
+    ],
+    "pg/ml": [
+     "pg/ml",
+     "pg per ml",
+     "picograms per milliliter"
+    ],
+    "pmol/l": [
+     "pmol/l",
+     "picomoles per liter"
+    ],
+    "sec": [
+     "sec",
+     "secs",
+     "s",
+     "s.",
+     "sec.",
+     "second",
+     "seconds",
+     "second(s)",
+     "second (s)"
+    ],
+    "torr": [
+     "torr"
+    ],
+    "u/l": [
+     "u/l",
+     "u per l",
+     "u.l",
+     "u_l",
+     "iu/l",
+     "iu per l",
+     "iu.l",
+     "iu_l",
+     "[iu]/l",
+     "[iu] per l",
+     "units/l",
+     "unit/l",
+     "units per liter",
+     "units per litre",
+     "unit per liter",
+     "unit per litre"
+    ],
+    "ug/dl": [
+     "ug/dl",
+     "µg/dl",
+     "μg/dl",
+     "μg/dl",
+     "ug per dl",
+     "ug.dl",
+     "ug_dl",
+     "mcg/dl",
+     "mcg per dl",
+     "micrograms per deciliter",
+     "micrograms per decilitre",
+     "microgram per deciliter"
+    ],
+    "ug/l": [
+     "ug/l",
+     "µg/l",
+     "μg/l",
+     "μg/l",
+     "ug per l",
+     "ug.l",
+     "ug_l",
+     "mcg/l",
+     "mcg per l",
+     "micrograms per liter",
+     "micrograms per litre",
+     "microgram per liter"
+    ],
+    "ug/ml": [
+     "ug/ml",
+     "µg/ml",
+     "μg/ml",
+     "μg/ml",
+     "ug per ml",
+     "ug.ml",
+     "ug_ml",
+     "mcg/ml",
+     "mcg per ml",
+     "micrograms per milliliter",
+     "micrograms per millilitre",
+     "microgram per milliliter"
+    ],
+    "umol/l": [
+     "umol/l",
+     "µmol/l",
+     "μmol/l",
+     "μmol/l",
+     "micromoles per liter"
+    ]
+   },
+   "lab_outlier_ranges": {
+    "basophils_percent": {
+     "max": 100,
+     "min": 0
+    },
+    "eosinophils_percent": {
+     "max": 100,
+     "min": 0
+    },
+    "lymphocytes_absolute": {
+     "max": 50,
+     "min": 0
+    },
+    "lymphocytes_percent": {
+     "max": 100,
+     "min": 0
+    },
+    "monocytes_percent": {
+     "max": 100,
+     "min": 0
+    },
+    "neutrophils_percent": {
+     "max": 100,
+     "min": 0
+    },
+    "pt": {
+     "max": 200,
+     "min": 1
+    }
+   },
+   "lab_reference_units": {
+    "albumin": "g/dl",
+    "alkaline_phosphatase": "u/l",
+    "alt": "u/l",
+    "ast": "u/l",
+    "basophils_absolute": "10^3/ul",
+    "basophils_percent": "%",
+    "bicarbonate": "mmol/l",
+    "bilirubin_conjugated": "mg/dl",
+    "bilirubin_total": "mg/dl",
+    "bilirubin_unconjugated": "mg/dl",
+    "bun": "mg/dl",
+    "calcium_ionized": "mg/dl",
+    "calcium_total": "mg/dl",
+    "chloride": "mmol/l",
+    "creatinine": "mg/dl",
+    "crp": "mg/l",
+    "eosinophils_absolute": "10^3/ul",
+    "eosinophils_percent": "%",
+    "esr": "mm/hour",
+    "ferritin": "ng/ml",
+    "glucose_fingerstick": "mg/dl",
+    "glucose_serum": "mg/dl",
+    "hemoglobin": "g/dl",
+    "inr": "(no units)",
+    "lactate": "mmol/l",
+    "ldh": "u/l",
+    "lymphocytes_absolute": "10^3/ul",
+    "lymphocytes_percent": "%",
+    "magnesium": "mg/dl",
+    "monocytes_absolute": "10^3/ul",
+    "monocytes_percent": "%",
+    "neutrophils_absolute": "10^3/ul",
+    "neutrophils_percent": "%",
+    "pco2_arterial": "mmhg",
+    "pco2_venous": "mmhg",
+    "ph_arterial": "(no units)",
+    "ph_venous": "(no units)",
+    "phosphate": "mg/dl",
+    "platelet_count": "10^3/ul",
+    "po2_arterial": "mmhg",
+    "potassium": "mmol/l",
+    "procalcitonin": "ng/ml",
+    "pt": "sec",
+    "ptt": "sec",
+    "so2_arterial": "%",
+    "so2_central_venous": "%",
+    "so2_mixed_venous": "%",
+    "sodium": "mmol/l",
+    "total_protein": "g/dl",
+    "troponin_i": "ng/l",
+    "troponin_t": "ng/l",
+    "wbc": "10^3/ul"
+   },
+   "vital_ranges": {
+    "dbp": {
+     "max": 200,
+     "min": 0
+    },
+    "heart_rate": {
+     "max": 300,
+     "min": 0
+    },
+    "height_cm": {
+     "max": 255,
+     "min": 70
+    },
+    "map": {
+     "max": 250,
+     "min": 0
+    },
+    "respiratory_rate": {
+     "max": 60,
+     "min": 0
+    },
+    "sbp": {
+     "max": 300,
+     "min": 0
+    },
+    "spo2": {
+     "max": 100,
+     "min": 50
+    },
+    "temp_c": {
+     "max": 44.0,
+     "min": 25.0
+    },
+    "weight_kg": {
+     "max": 1100,
+     "min": 30
+    }
+   },
+   "vital_units": {
+    "dbp": "mmHg",
+    "heart_rate": "(no units)",
+    "height_cm": "Centimeters",
+    "map": "mmHg",
+    "respiratory_rate": "(no units)",
+    "sbp": "mmHg",
+    "spo2": "%",
+    "temp_c": "Celsius",
+    "weight_kg": "Kg"
+   }
+  },
+  "3.0": {
+   "allowed_unit_variants": {
+    "%": [
+     "%",
+     "percent",
+     "pct",
+     "pct."
+    ],
+    "(no units)": [
+     "(no units)",
+     "no units",
+     "none",
+     "unitless",
+     "ratio"
+    ],
+    "10^3/ul": [
+     "10^3/ul",
+     "10^3/µl",
+     "10^3/μl",
+     "10^3/μl",
+     "10*3/ul",
+     "10*3/µl",
+     "10*3/μl",
+     "10*3/μl",
+     "x10^3/ul",
+     "x10^3/µl",
+     "x10^3/μl",
+     "x10^3/μl",
+     "x10e3/ul",
+     "x10e3/µl",
+     "x10e3/μl",
+     "10e3/ul",
+     "10e3/µl",
+     "10e3/μl",
+     "k/ul",
+     "k/µl",
+     "k/μl",
+     "k/μl",
+     "k/mcl",
+     "thousand/ul",
+     "thousand/µl",
+     "thousand/μl",
+     "thousand/μl",
+     "thous/ul",
+     "thous/µl",
+     "thous/μl",
+     "thous/μl",
+     "k/cu mm",
+     "k/cumm",
+     "k/cu.mm",
+     "k/mm3",
+     "k/mm^3",
+     "x10^3/mm3",
+     "x10^3/mm^3",
+     "10^3/mm3",
+     "10^3/mm^3",
+     "10^9/l",
+     "10*9/l",
+     "x10^9/l",
+     "10e9/l"
+    ],
+    "cells/ul": [
+     "cells/ul",
+     "cells/µl",
+     "cells/μl",
+     "cells/μl",
+     "cells per microliter",
+     "cell/ul",
+     "cell/µl",
+     "cell/μl",
+     "cell/μl",
+     "/cu mm",
+     "/cumm",
+     "/mm3",
+     "/mm^3",
+     "per cu mm",
+     "per cumm",
+     "per mm3",
+     "per mm^3"
+    ],
+    "fraction": [
+     "decimal",
+     "fraction"
+    ],
+    "g/100ml": [
+     "g/100ml",
+     "g per 100ml",
+     "gram/100ml",
+     "grams/100ml",
+     "grams per 100ml",
+     "gm/100ml",
+     "gm per 100ml"
+    ],
+    "g/dl": [
+     "g/dl",
+     "g per dl",
+     "g/dl.",
+     "gram/dl",
+     "grams/dl",
+     "grams per deciliter",
+     "g per decilitre",
+     "g/deciliter",
+     "gm/dl"
+    ],
+    "g/l": [
+     "g/l",
+     "g per l",
+     "gram/l",
+     "grams/l",
+     "grams per liter",
+     "grams per litre",
+     "g/liter",
+     "g/litre",
+     "gm/l",
+     "gm per l"
+    ],
+    "kpa": [
+     "kpa",
+     "kilopascal",
+     "kilopascals"
+    ],
+    "meq/l": [
+     "meq/l",
+     "milliequivalents per liter"
+    ],
+    "mg/100ml": [
+     "mg/100ml",
+     "mg per 100ml"
+    ],
+    "mg/dl": [
+     "mg/dl",
+     "mg per dl",
+     "mg/dl.",
+     "milligrams per deciliter",
+     "milligrams per decilitre",
+     "mg per deciliter",
+     "mg per decilitre",
+     "mg.dl",
+     "mg_dl"
+    ],
+    "mg/g": [
+     "mg/g",
+     "mg per g",
+     "mg/gram",
+     "mg per gram",
+     "mg/g creat",
+     "mg/g creatinine"
+    ],
+    "mg/l": [
+     "mg/l",
+     "mg per l",
+     "mg per liter",
+     "mg per litre",
+     "milligrams per liter",
+     "milligrams per litre",
+     "milligram per liter",
+     "milligram per litre",
+     "mg/l.",
+     "mg per l.",
+     "mg per liter.",
+     "mg per litre.",
+     "mg.l",
+     "mg.l.",
+     "mg_l",
+     "mg_l.",
+     "mg l^-1",
+     "mg l-1",
+     "mg l^-1",
+     "mg l-1"
+    ],
+    "min": [
+     "min",
+     "mins",
+     "minute",
+     "minutes"
+    ],
+    "miu/l": [
+     "miu/l",
+     "miu per l",
+     "milli-iu/l",
+     "milliunits per liter",
+     "milliunits per litre",
+     "μiu/ml",
+     "uiu/ml"
+    ],
+    "mm/hour": [
+     "mm/hour",
+     "mm/hr",
+     "mm/h"
+    ],
+    "mmhg": [
+     "mmhg",
+     "mm hg",
+     "mm.hg",
+     "mm of hg",
+     "millimeters of mercury",
+     "millimetres of mercury"
+    ],
+    "mmol/l": [
+     "mmol/l",
+     "mmoles/l",
+     "millimoles per liter",
+     "millimoles per litre"
+    ],
+    "mol/l": [
+     "mol/l",
+     "moles per liter"
+    ],
+    "ng/dl": [
+     "ng/dl",
+     "ng per dl",
+     "nanograms per deciliter"
+    ],
+    "ng/l": [
+     "ng/l",
+     "ng per l",
+     "nanograms per liter"
+    ],
+    "ng/ml": [
+     "ng/ml",
+     "ng per ml",
+     "ng/ml.",
+     "nanograms per milliliter",
+     "nanograms per millilitre",
+     "ng per milliliter",
+     "ng per millilitre",
+     "ng.ml",
+     "ng_ml"
+    ],
+    "nmol/l": [
+     "nmol/l",
+     "nanomoles per liter"
+    ],
+    "pa": [
+     "pa",
+     "pascal"
+    ],
+    "pg/l": [
+     "pg/l",
+     "picograms per liter"
+    ],
+    "pg/ml": [
+     "pg/ml",
+     "pg per ml",
+     "picograms per milliliter"
+    ],
+    "pmol/l": [
+     "pmol/l",
+     "picomoles per liter"
+    ],
+    "sec": [
+     "sec",
+     "secs",
+     "s",
+     "s.",
+     "sec.",
+     "second",
+     "seconds",
+     "second(s)",
+     "second (s)"
+    ],
+    "torr": [
+     "torr"
+    ],
+    "u/l": [
+     "u/l",
+     "u per l",
+     "u.l",
+     "u_l",
+     "iu/l",
+     "iu per l",
+     "iu.l",
+     "iu_l",
+     "[iu]/l",
+     "[iu] per l",
+     "units/l",
+     "unit/l",
+     "units per liter",
+     "units per litre",
+     "unit per liter",
+     "unit per litre"
+    ],
+    "u/ml": [
+     "u/ml",
+     "u per ml",
+     "iu/ml",
+     "iu per ml",
+     "units/ml",
+     "unit/ml",
+     "units per milliliter",
+     "units per millilitre"
+    ],
+    "ug/dl": [
+     "ug/dl",
+     "µg/dl",
+     "μg/dl",
+     "μg/dl",
+     "ug per dl",
+     "ug.dl",
+     "ug_dl",
+     "mcg/dl",
+     "mcg per dl",
+     "micrograms per deciliter",
+     "micrograms per decilitre",
+     "microgram per deciliter"
+    ],
+    "ug/l": [
+     "ug/l",
+     "µg/l",
+     "μg/l",
+     "μg/l",
+     "ug per l",
+     "ug.l",
+     "ug_l",
+     "mcg/l",
+     "mcg per l",
+     "micrograms per liter",
+     "micrograms per litre",
+     "microgram per liter"
+    ],
+    "ug/ml": [
+     "ug/ml",
+     "µg/ml",
+     "μg/ml",
+     "μg/ml",
+     "ug per ml",
+     "ug.ml",
+     "ug_ml",
+     "mcg/ml",
+     "mcg per ml",
+     "micrograms per milliliter",
+     "micrograms per millilitre",
+     "microgram per milliliter"
+    ],
+    "umol/l": [
+     "umol/l",
+     "µmol/l",
+     "μmol/l",
+     "μmol/l",
+     "micromoles per liter"
+    ]
+   },
+   "lab_outlier_ranges": {
+    "basophils_percent": {
+     "max": 100,
+     "min": 0
+    },
+    "eosinophils_percent": {
+     "max": 100,
+     "min": 0
+    },
+    "lymphocytes_absolute": {
+     "max": 50,
+     "min": 0
+    },
+    "lymphocytes_percent": {
+     "max": 100,
+     "min": 0
+    },
+    "monocytes_percent": {
+     "max": 100,
+     "min": 0
+    },
+    "neutrophils_percent": {
+     "max": 100,
+     "min": 0
+    },
+    "pt": {
+     "max": 200,
+     "min": 1
+    }
+   },
+   "lab_reference_units": {
+    "ada": "u/l",
+    "albumin": "g/dl",
+    "albumin_to_creatinine_ratio": "mg/g",
+    "alkaline_phosphatase": "u/l",
+    "alt": "u/l",
+    "amphetamine": "(no units)",
+    "amylase": "u/l",
+    "ast": "u/l",
+    "barbiturate": "(no units)",
+    "basophils_absolute": "10^3/ul",
+    "basophils_percent": "%",
+    "benzodiazepine": "(no units)",
+    "bicarbonate": "mmol/l",
+    "bilirubin": "mg/dl",
+    "bilirubin_conjugated": "mg/dl",
+    "bilirubin_total": "mg/dl",
+    "bilirubin_unconjugated": "mg/dl",
+    "bnp": "pg/ml",
+    "bun": "mg/dl",
+    "calcium_ionized": "mg/dl",
+    "calcium_total": "mg/dl",
+    "chloride": "mmol/l",
+    "cholesterol": "mg/dl",
+    "ckmb": "ng/ml",
+    "co2": "mmol/l",
+    "cocaine": "(no units)",
+    "creatinine": "mg/dl",
+    "crp": "mg/l",
+    "cystatin_c": "mg/l",
+    "d_dimer": "ug/ml",
+    "eosinophils_absolute": "10^3/ul",
+    "eosinophils_percent": "%",
+    "esr": "mm/hour",
+    "ethanol": "(no units)",
+    "fentanyl": "(no units)",
+    "ferritin": "ng/ml",
+    "fibrinogen": "mg/dl",
+    "free_t3": "pg/ml",
+    "free_t4": "ng/dl",
+    "glucose": "mg/dl",
+    "glucose_serum": "mg/dl",
+    "hematocrit": "%",
+    "hematocrit_percent": "%",
+    "hemoglobin": "g/dl",
+    "igfbp7": "ng/ml",
+    "inr": "(no units)",
+    "interleukin_01": "pg/ml",
+    "interleukin_02": "pg/ml",
+    "interleukin_02_receptor_soluble": "u/ml",
+    "interleukin_05": "pg/ml",
+    "interleukin_06": "pg/ml",
+    "interleukin_08": "pg/ml",
+    "interleukin_10": "pg/ml",
+    "interleukin_13": "pg/ml",
+    "interleukin_18": "pg/ml",
+    "kim_1": "ng/ml",
+    "lactate": "mmol/l",
+    "ldh": "u/l",
+    "lipase": "u/l",
+    "lymphocytes_absolute": "10^3/ul",
+    "lymphocytes_percent": "%",
+    "macrophages_percent": "%",
+    "magnesium": "mg/dl",
+    "mesothelial": "%",
+    "methadone": "(no units)",
+    "monocytes_absolute": "10^3/ul",
+    "monocytes_percent": "%",
+    "nag": "u/l",
+    "neutrophils_absolute": "10^3/ul",
+    "neutrophils_percent": "%",
+    "ngal": "ng/ml",
+    "nt_pro_bnp": "pg/ml",
+    "opiate": "(no units)",
+    "other_absolute": "cells/ul",
+    "oxycodone": "(no units)",
+    "pco2_arterial": "mmhg",
+    "pco2_venous": "mmhg",
+    "pcp": "(no units)",
+    "ph_arterial": "(no units)",
+    "ph_venous": "(no units)",
+    "phosphate": "mg/dl",
+    "plasma_absolute": "cells/ul",
+    "platelet_count": "10^3/ul",
+    "po2_arterial": "mmhg",
+    "po2_mixed_venous": "mmhg",
+    "potassium": "mmol/l",
+    "probnp": "pg/ml",
+    "procalcitonin": "ng/ml",
+    "protein": "g/dl",
+    "protein_to_creatinine_ratio": "mg/g",
+    "pt": "sec",
+    "ptt": "sec",
+    "rbc": "cells/ul",
+    "rbc_absolute": "cells/ul",
+    "so2_arterial": "%",
+    "so2_central_venous": "%",
+    "so2_mixed_venous": "%",
+    "sodium": "mmol/l",
+    "timp_2": "ng/ml",
+    "timp_2_igfbp7": "(ng/ml)^2/1000",
+    "total_protein": "g/dl",
+    "toxic_granulation": "(no units)",
+    "triglycerides": "mg/dl",
+    "troponin_i": "ng/l",
+    "troponin_t": "ng/l",
+    "tsh": "miu/l",
+    "wbc": "10^3/ul",
+    "wbc_absolute": "cells/ul"
+   },
+   "vital_ranges": {
+    "dbp": {
+     "max": 200,
+     "min": 0
+    },
+    "heart_rate": {
+     "max": 300,
+     "min": 0
+    },
+    "height_cm": {
+     "max": 255,
+     "min": 70
+    },
+    "map": {
+     "max": 250,
+     "min": 0
+    },
+    "respiratory_rate": {
+     "max": 60,
+     "min": 0
+    },
+    "sbp": {
+     "max": 300,
+     "min": 0
+    },
+    "spo2": {
+     "max": 100,
+     "min": 50
+    },
+    "temp_c": {
+     "max": 44.0,
+     "min": 25.0
+    },
+    "weight_kg": {
+     "max": 1100,
+     "min": 30
+    }
+   },
+   "vital_units": {
+    "dbp": "mmHg",
+    "heart_rate": "(no units)",
+    "height_cm": "Centimeters",
+    "intracranial_pressure": "mmHg",
+    "map": "mmHg",
+    "pulse_pressure_variation": "%",
+    "respiratory_rate": "(no units)",
+    "sbp": "mmHg",
+    "spo2": "%",
+    "temp_c": "Celsius",
+    "weight_kg": "Kg"
+   }
+  }
+ }
+}

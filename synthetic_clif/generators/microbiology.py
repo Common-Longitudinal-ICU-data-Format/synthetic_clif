@@ -162,6 +162,7 @@ class MicrobiologyCultureGenerator(BaseGenerator):
             if order_time >= discharge_time:
                 continue
             collect_time = order_time + timedelta(minutes=int(self.rng.integers(10, 60)))
+            collect_time = min(collect_time, discharge_time)  # collected before the patient leaves
             if not cx["positive"]:
                 organism = "no_growth"
             elif cx.get("contaminant"):
@@ -264,7 +265,7 @@ class MicrobiologyCultureGenerator(BaseGenerator):
             collect_delay = int(self.rng.integers(15, 60))  # minutes
             result_delay = int(self.rng.integers(24, 72))  # hours for cultures
 
-            collect_time = order_time + timedelta(minutes=collect_delay)
+            collect_time = min(order_time + timedelta(minutes=collect_delay), discharge_time)
             result_time = collect_time + timedelta(hours=result_delay)
 
             method = self.rng.choice(

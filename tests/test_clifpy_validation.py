@@ -1,16 +1,21 @@
 """CLIFPy validation tests for synthetic CLIF data.
 
 Generates a small synthetic dataset and validates it using the CLIFPy
-package to ensure schema compliance with the CLIF 2.1.0 specification.
-These tests replace individual category/unit/range checks across
-per-generator test files since CLIFPy validates all of those.
+package to ensure schema compliance with the CLIF 2.1.0 specification
+(columns, data types, vocabularies). clifpy reports units, value ranges,
+keys and timestamps only as data-quality warnings, so those are enforced in
+tests/test_integrity.py instead.
 """
 
-import pytest
 import tempfile
+import warnings
 from pathlib import Path
 
+import pandas as pd
+import pytest
+
 from synthetic_clif.generators.dataset import SyntheticCLIFDataset
+from tests.clifpy_errors import DTYPE_MISMATCH, of_type, structural_errors
 
 # Tables that CLIFPy can validate (18 total)
 CLIFPY_VALIDATED_TABLES = [
@@ -33,29 +38,6 @@ CLIFPY_VALIDATED_TABLES = [
     "microbiology_nonculture",
     "code_status",
 ]
-
-
-def _get_structural_errors(errors: list[dict]) -> list[dict]:
-    """Filter validation errors to only structural/schema problems.
-
-    Excludes data quality warnings (null counts, outlier ranges, duplicates)
-    that are expected in synthetic data with intentional missingness.
-    """
-    structural = []
-    for e in errors:
-        etype = e.get("type", "")
-        status = e.get("status", "")
-
-        if etype == "missing_columns":
-            structural.append(e)
-        elif etype == "datatype_mismatch":
-            structural.append(e)
-        elif etype == "invalid_categorical_values" and status == "error":
-            structural.append(e)
-        elif etype == "invalid_units" and status == "error":
-            structural.append(e)
-
-    return structural
 
 
 @pytest.fixture(scope="module")
@@ -94,10 +76,13 @@ def clifpy_results():
             data_directory=str(output_dir),
             filetype="parquet",
             timezone="UTC",
+            output_directory=str(output_dir / "clifpy_output"),
         )
 
-        co.initialize(tables=written_tables)
-        co.validate_all()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            co.initialize(tables=written_tables)
+            co.validate_all()
 
         # Collect results
         results = {}
@@ -105,7 +90,7 @@ def clifpy_results():
             table_obj = getattr(co, table_name, None)
             if table_obj is not None:
                 all_errors = list(table_obj.errors)
-                structural = _get_structural_errors(all_errors)
+                structural = structural_errors(all_errors, columns=table_obj.df.columns)
                 results[table_name] = (
                     table_obj.isvalid(),
                     structural,
@@ -127,7 +112,7 @@ class TestCLIFPyValidation:
     def test_no_missing_columns(self, clifpy_results):
         """Test that no table has missing required columns."""
         for table_name, (_, structural, _) in clifpy_results.items():
-            missing = [e for e in structural if e["type"] == "missing_columns"]
+            missing = of_type(structural, "Missing Columns", "Missing Required Columns")
             assert not missing, (
                 f"Table '{table_name}' has missing columns: {missing}"
             )
@@ -135,9 +120,7 @@ class TestCLIFPyValidation:
     def test_no_datatype_mismatches(self, clifpy_results):
         """Test that no table has non-castable datatype mismatches."""
         for table_name, (_, structural, _) in clifpy_results.items():
-            mismatches = [
-                e for e in structural if e["type"] == "datatype_mismatch"
-            ]
+            mismatches = of_type(structural, DTYPE_MISMATCH)
             assert not mismatches, (
                 f"Table '{table_name}' has type mismatches: {mismatches}"
             )
@@ -145,10 +128,7 @@ class TestCLIFPyValidation:
     def test_no_invalid_categories(self, clifpy_results):
         """Test that no table has invalid categorical values."""
         for table_name, (_, structural, _) in clifpy_results.items():
-            invalid = [
-                e for e in structural
-                if e["type"] == "invalid_categorical_values"
-            ]
+            invalid = of_type(structural, "Invalid Categorical Values")
             assert not invalid, (
                 f"Table '{table_name}' has invalid categories: {invalid}"
             )
@@ -156,9 +136,7 @@ class TestCLIFPyValidation:
     def test_no_invalid_units(self, clifpy_results):
         """Test that no table has invalid measurement units."""
         for table_name, (_, structural, _) in clifpy_results.items():
-            bad_units = [
-                e for e in structural if e["type"] == "invalid_units"
-            ]
+            bad_units = of_type(structural, "Invalid Units")
             assert not bad_units, (
                 f"Table '{table_name}' has invalid units: {bad_units}"
             )
@@ -191,3 +169,52 @@ class TestCLIFPyValidation:
                 "No tables fully valid — expected due to intentional "
                 "missingness and data quality warnings in synthetic data"
             )
+
+
+# ---------------------------------------------------------------------------
+# The filter itself (issue #53): inject known schema errors and make sure the
+# tests above would see them. If clifpy renames its error types again, these
+# fail instead of every structural test passing silently.
+# ---------------------------------------------------------------------------
+@pytest.fixture(scope="module")
+def v21_tables():
+    ds = SyntheticCLIFDataset(n_patients=20, n_hospitalizations=24, seed=3, clif_version="2.1")
+    return ds.generate(verbose=False)
+
+
+def _clifpy_errors(table_name: str, df: pd.DataFrame) -> list[dict]:
+    clifpy_tables = pytest.importorskip("clifpy.tables", reason="clifpy not installed")
+    cls = {n.lower(): getattr(clifpy_tables, n) for n in dir(clifpy_tables)
+           if isinstance(getattr(clifpy_tables, n), type)}[table_name.replace("_", "")]
+    with tempfile.TemporaryDirectory() as tmp, warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        try:
+            obj = cls(data_directory=tmp, filetype="parquet", timezone="UTC", data=df,
+                      clif_version="2.1", output_directory=tmp)
+        except TypeError:  # clifpy releases without these arguments
+            obj = cls(data_directory=tmp, filetype="parquet", timezone="UTC", data=df)
+        obj.validate()
+        return list(obj.errors)
+
+
+class TestFilterCatchesErrors:
+    def test_clean_table_has_no_structural_errors(self, v21_tables):
+        df = v21_tables["vitals"]
+        assert structural_errors(_clifpy_errors("vitals", df), df.columns) == []
+
+    def test_missing_required_column(self, v21_tables):
+        df = v21_tables["vitals"].drop(columns=["vital_category"])
+        found = structural_errors(_clifpy_errors("vitals", df), df.columns)
+        assert of_type(found, "Missing Columns", "Missing Required Columns"), found
+
+    def test_invalid_category(self, v21_tables):
+        df = v21_tables["vitals"].copy()
+        df.loc[df.index[:5], "vital_category"] = "not_a_vital"
+        found = structural_errors(_clifpy_errors("vitals", df), df.columns)
+        assert of_type(found, "Invalid Categorical Values"), found
+
+    def test_wrong_dtype(self, v21_tables):
+        df = v21_tables["vitals"].copy()
+        df["vital_value"] = "abc"
+        found = structural_errors(_clifpy_errors("vitals", df), df.columns)
+        assert of_type(found, DTYPE_MISMATCH), found

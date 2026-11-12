@@ -219,6 +219,17 @@ pytest tests/ --ignore=tests/test_clifpy_validation.py
 
 # Run only CLIFPy validation
 pytest tests/test_clifpy_validation.py -v
+
+# Run only the integrity checks (keys, timestamps, ranges, units)
+pytest tests/test_integrity.py -v
+```
+
+To check a dataset yourself, 2.1 or 3.0:
+
+```python
+from synthetic_clif.validation import check_dataset, format_issues
+issues = check_dataset(tables, clif_version="3.0")  # [] when it passes
+print(format_issues(issues))
 ```
 
 Tests require `clifpy` for schema validation: `pip install clifpy`

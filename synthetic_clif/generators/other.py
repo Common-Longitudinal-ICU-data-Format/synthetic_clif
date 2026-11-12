@@ -184,7 +184,7 @@ class CRRTTherapyGenerator(BaseGenerator):
             if ts >= discharge_time:
                 break
             if self.rng.random() < 0.03:
-                qb = float(np.clip(qb + self.rng.choice([-20, 20]), 120, 300))
+                qb = float(np.clip(qb + self.rng.choice([-20, 20]), 150, 300))
             uf = 0.0 if course.ne_eq[i] > 0.2 else uf_goal
             rec = {
                 "hospitalization_id": hosp_id,

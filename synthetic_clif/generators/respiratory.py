@@ -221,6 +221,13 @@ class RespiratoryGenerator(BaseGenerator):
         }
         if device == "Room Air":
             record["fio2_set"] = 0.21
+        if device in ("CPAP", "NIPPV"):
+            # the mask interface reports delivered tidal volume and rate
+            rr_obs = max(round(course.at("rr", ts) + self.rng.normal(0, 0.8)), 6)
+            vt = course.pbw_kg * self.rng.uniform(6, 9)
+            record["tidal_volume_obs"] = float(round(vt))
+            record["resp_rate_obs"] = float(rr_obs)
+            return record
         if device != "IMV":
             return record
 

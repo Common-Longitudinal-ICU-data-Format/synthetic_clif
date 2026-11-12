@@ -183,7 +183,16 @@ class LabsGenerator(BaseGenerator):
             hosp_labs = self._generate_hospitalization_labs(
                 hosp_id, admit_time, discharge_time, reference_units, course_for_row(hosp)
             )
-            records.extend(hosp_labs)
+            # No specimen is collected after the patient leaves (or dies), and a
+            # panel overlap (e.g. bicarbonate on a BMP and a blood gas drawn
+            # together) reports one result per analyte per collection
+            seen = set()
+            for rec in hosp_labs:
+                key = (rec["lab_collect_dttm"], rec["lab_category"])
+                if rec["lab_collect_dttm"] > discharge_time or key in seen:
+                    continue
+                seen.add(key)
+                records.append(rec)
 
         df = pd.DataFrame(records)
 
@@ -402,12 +411,14 @@ class LabsGenerator(BaseGenerator):
             if value is None:
                 value = self.rng.normal(mean, std)
             value = float(np.clip(value, lower, upper))
+            if lab_cat in ("troponin_i", "troponin_t"):
+                value *= 1000  # simulated in ng/mL; CLIF reports troponin in ng/L
 
             # Format value string
             if lab_cat in ["ph", "ph_arterial", "ph_venous"]:
                 value_str = f"{value:.2f}"
                 value = round(value, 2)
-            elif lab_cat in ["troponin_i", "troponin_t", "procalcitonin"]:
+            elif lab_cat in ["procalcitonin"]:
                 value_str = f"{value:.3f}"
                 value = round(value, 3)
             else:
