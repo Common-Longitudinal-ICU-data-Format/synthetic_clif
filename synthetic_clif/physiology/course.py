@@ -863,19 +863,172 @@ class HospitalCourse:
             "ptt": b["ptt"] + 10 * shock_lag + self._d("ptt", h, 2.0) + noise(1.0),
             "crp": b["crp"] + 180 * _lag_value(self.infection, i, 12.0) * mul("crp", 0.1),
             "procalcitonin": b["procalcitonin"] * math.exp(3.5 * min(inf, 1.2)) * mul("pct", 0.15),
-            "troponin_i": b["troponin_i"] * (1 + 40 * shock**2) * mul("trop", 0.2),
+            # high-sensitivity assay in ng/L (the baseline is drawn in ng/mL)
+            "troponin_i": 1000 * b["troponin_i"] * (1 + 40 * shock**2) * mul("trop", 0.2),
             "pco2_arterial": pco2,
             "po2_arterial": self.pao2[i] * (1 + noise(0.04)),
             "pco2_venous": pco2 + 6 + noise(1.5),
             "so2_central_venous": self.svo2_true(i) + 3 + noise(2.0),
         }
-        values["bilirubin_conjugated"] = values["bilirubin_total"] * 0.3 * (1 + noise(0.05))
         values["ph_arterial"] = 6.1 + math.log10(hco3 / (0.0307 * pco2))
         values["ph_venous"] = 6.1 + math.log10(hco3 / (0.0307 * values["pco2_venous"]))
+        values.update(self._extended_labs(h, values, set(categories), rng))
         for cat in categories:
             if cat in values:
                 out[cat] = float(values[cat])
         return out
+
+    # ------------------------------------------------------------------
+    # Less common labs (differential, ionized calcium, cardiac and
+    # inflammatory markers, coagulation factors, mixed venous gases)
+    # ------------------------------------------------------------------
+    @property
+    def lab_ext_base(self) -> dict:
+        """Per-stay baselines for the less common labs.
+
+        Drawn from their own stream so adding them leaves the rest of the
+        course (and every table built on it) unchanged.
+        """
+        b = getattr(self, "_lab_ext_base", None)
+        if b is not None:
+            return b
+        r = np.random.default_rng((self.rng_seed + _stable_hash("labs_ext")) & 0xFFFFFFFF)
+        male = self.sex == "male"
+        age = self.age
+        b = {
+            "neut": r.normal(60, 6), "lymph": r.normal(28, 6), "mono": r.normal(7.5, 1.5),
+            "eos": math.exp(r.normal(math.log(2.2), 0.5)), "baso": math.exp(r.normal(math.log(0.6), 0.3)),
+            "conj_frac": float(np.clip(r.normal(0.22, 0.05), 0.08, 0.4)),
+            "ica_offset": r.normal(0, 0.1),
+            # one troponin and one natriuretic peptide assay per hospital stay
+            "troponin": "troponin_t" if r.random() < 0.35 else "troponin_i",
+            "natriuretic": "nt_pro_bnp" if r.random() < 0.5 else "bnp",
+            "tnt": math.exp(r.normal(math.log(9 + 0.15 * max(age - 50, 0)), 0.5)) * (2.0 if self.ckd else 1.0),
+            "bnp": math.exp(r.normal(math.log(40) + 0.025 * (age - 60), 0.7)) * (2.5 if self.ckd else 1.0),
+            "esr": max(2.0, (age / 4 + (8 if not male else 0)) * math.exp(r.normal(0, 0.35))),
+            "ferritin": math.exp(r.normal(math.log(160 if male else 90), 0.55)),
+            "ldh": math.exp(r.normal(math.log(185), 0.15)),
+            "fibrinogen": r.normal(320, 50),
+            "d_dimer": math.exp(r.normal(math.log(0.4) + 0.015 * (age - 60), 0.45)),
+            "triglycerides": math.exp(r.normal(math.log(115), 0.35)) * (1.35 if self.diabetic else 1.0),
+        }
+        self._lab_ext_base = b
+        return b
+
+    @property
+    def propofol_hours(self) -> np.ndarray:
+        """Cumulative hours of propofol infusion (sedated IMV with propofol)."""
+        p = getattr(self, "_propofol_hours", None)
+        if p is None:
+            on = (self.sed_depth > 0) if self.sed_depth is not None else np.zeros(self.n_hours, bool)
+            p = np.cumsum(on & (self.sedative == "propofol")).astype(float)
+            self._propofol_hours = p
+        return p
+
+    def _extended_labs(self, h: float, v: dict, want: set, rng) -> dict:
+        """Values for the less common labs, consistent with ``v`` from the same draw."""
+        i = int(h)
+        S = min(float(self.severity[i]), 1.0)
+        shock = float(self.shock[i])
+        aki = float(self.aki[i])
+        inf = min(float(self.infection[i]), 1.2)
+        e = self.lab_ext_base
+        mul = lambda key, sd: math.exp(self._d(key, h, sd))
+        noise = lambda sd: rng.normal(0, sd)
+        out = {}
+
+        diff = {"neutrophils", "lymphocytes", "monocytes", "eosinophils", "basophils"}
+        if any(c.split("_")[0] in diff for c in want):
+            # infection and stress shift the differential toward neutrophils
+            stress = min(inf + 0.4 * S, 1.0)
+            w = {
+                "neutrophils": max(e["neut"], 35) * (1 + 0.8 * inf + 0.3 * S) * mul("neut", 0.05),
+                "lymphocytes": max(e["lymph"], 8) * max(1 - 0.65 * stress, 0.12) * mul("lymph", 0.12),
+                "monocytes": max(e["mono"], 2) * mul("mono", 0.12),
+                "eosinophils": e["eos"] * max(1 - 0.85 * stress, 0.05) * mul("eos", 0.25),
+                "basophils": e["baso"] * mul("baso", 0.15),
+            }
+            w = {cell: x * (1 + noise(0.02)) for cell, x in w.items()}
+            tot = sum(w.values())  # a manual or machine count always sums to 100%
+            for cell, x in w.items():
+                pct = 100 * x / tot
+                out[f"{cell}_percent"] = pct
+                out[f"{cell}_absolute"] = v["wbc"] * pct / 100
+
+        if want & {"bilirubin_conjugated", "bilirubin_unconjugated"}:
+            frac = e["conj_frac"] + 0.35 * min(_lag_value(self.severity, i, 24.0), 1.0)
+            frac = float(np.clip(frac * (1 + noise(0.05)), 0.05, 0.9))
+            out["bilirubin_conjugated"] = v["bilirubin_total"] * frac
+            out["bilirubin_unconjugated"] = v["bilirubin_total"] * (1 - frac)
+
+        if "calcium_ionized" in want:
+            # ~half of total calcium is ionized; corrected for albumin, lower in
+            # sepsis and after citrated blood, higher in acidaemia
+            corrected = v["calcium_total"] + 0.8 * (4.0 - v["albumin"])
+            citrate = self.product_effect(h, "Packed RBCs", 0.08, 6.0) + self.product_effect(
+                h, "Fresh Frozen Plasma", 0.08, 6.0)
+            out["calcium_ionized"] = (4.85 + 0.42 * (corrected - 9.3) - 0.45 * S - citrate
+                                      - 2.0 * (v["ph_arterial"] - 7.40) + e["ica_offset"] + noise(0.05))
+
+        if "so2_arterial" in want:
+            out["so2_arterial"] = min(float(severinghaus_spo2(v["po2_arterial"])) + noise(0.6), 100.0)
+
+        if want & {"so2_mixed_venous", "po2_mixed_venous"}:
+            svo2 = float(np.clip(self.svo2_true(i) + noise(1.5), 25, 92))
+            out["so2_mixed_venous"] = svo2
+            out["po2_mixed_venous"] = _pao2_for_sat(svo2) + noise(0.8)
+
+        if "glucose_fingerstick" in want:
+            out["glucose_fingerstick"] = v["glucose_serum"] + noise(9)
+
+        if want & {"troponin_t"}:
+            out["troponin_t"] = e["tnt"] * (1 + 30 * shock**2) * (1 + 0.8 * aki) * mul("trop", 0.2)
+
+        if want & {"bnp", "nt_pro_bnp"}:
+            cardio = 8.0 if self.shock_type == "cardiogenic" else 1.5
+            bnp = e["bnp"] * (1 + cardio * min(shock, 1.2) + 1.0 * aki) * mul("bnp", 0.2)
+            out["bnp"] = bnp
+            out["nt_pro_bnp"] = bnp * 5.5 * (1 + 0.6 * aki) * (1 + noise(0.05))
+
+        if want & {"esr", "ferritin", "fibrinogen", "d_dimer", "ldh"}:
+            inf24 = min(_lag_value(self.infection, i, 24.0), 1.2)
+            shock_lag = float(_lag_value(self.shock, i, 12.0))
+            if "esr" in want:
+                out["esr"] = e["esr"] * (1 + 2.0 * min(_lag_value(self.infection, i, 48.0), 1.2)) * mul("esr", 0.08)
+            if "ferritin" in want:
+                out["ferritin"] = e["ferritin"] * (1 + 4.0 * inf24 + 0.5 * S) * mul("ferritin", 0.1)
+            if "ldh" in want:
+                out["ldh"] = e["ldh"] * (1 + 3.0 * max(shock_lag - 0.4, 0) ** 1.3 + 0.4 * S) * mul("ldh", 0.08)
+            if "fibrinogen" in want:
+                bleed = 0.0 if self.bleed is None else float(self.bleed[i])
+                fib = (e["fibrinogen"] * (1 + 0.6 * inf24) - 260 * max(shock_lag - 0.6, 0)
+                       - 35 * bleed + self.product_effect(h, "Cryoprecipitate", 60.0, 96.0)
+                       + self.product_effect(h, "Fresh Frozen Plasma", 8.0, 48.0)
+                       + self._d("fibrinogen", h, 20.0) + noise(8))
+                out["fibrinogen"] = max(fib, 40.0)
+            if "d_dimer" in want:
+                out["d_dimer"] = (e["d_dimer"] * (1 + 2.5 * inf24 + 10 * max(shock_lag - 0.5, 0) ** 1.5)
+                                  * mul("ddimer", 0.15))
+
+        if "hematocrit" in want:
+            out["hematocrit"] = 3.0 * v["hemoglobin"] + noise(0.6)
+
+        if "triglycerides" in want:
+            prop_h = float(self.propofol_hours[i])
+            out["triglycerides"] = e["triglycerides"] * min(1 + 0.012 * prop_h, 3.5) * mul("tg", 0.1)
+        return out
+
+
+def _pao2_for_sat(sat: float) -> float:
+    """PO2 (mmHg) that gives saturation ``sat`` (%) on the Severinghaus curve."""
+    lo, hi = 5.0, 600.0
+    for _ in range(40):
+        mid = 0.5 * (lo + hi)
+        if float(severinghaus_spo2(mid)) < sat:
+            lo = mid
+        else:
+            hi = mid
+    return 0.5 * (lo + hi)
 
 
 def _lag_value(arr: np.ndarray, i: int, tau_h: float) -> float:

@@ -31,6 +31,7 @@ import numpy as np
 import pandas as pd
 
 from synthetic_clif.clif3 import schema, vocab
+from synthetic_clif.config import lab_catalog
 
 # 2.1 tables whose names are unchanged in 3.0
 _SAME_NAME = {
@@ -208,6 +209,14 @@ class CLIF3Converter:
             df.loc[trop, "lab_value_numeric"] = num.round(1)
             df.loc[trop, "lab_value"] = num.round(1).astype(str)
             df.loc[trop, "reference_unit"] = "ng/L"
+        # 3.0 mCIDE units and order categories (cardiac, inflammatory, poc,
+        # mixed_venous_blood_gas are new); bicarbonate keeps bmp or blood_gas
+        cat = df["lab_category"].astype(str)
+        known = cat.isin(list(lab_catalog.LABS))
+        df.loc[known, "reference_unit"] = cat[known].map(lambda c: lab_catalog.LABS[c].unit_30)
+        order30 = cat.map(lambda c: lab_catalog.LABS[c].order_30 if c in lab_catalog.LABS else None)
+        df["lab_order_category"] = order30.where(order30.notna(), df["lab_order_category"])
+        df["lab_category"] = cat.replace(lab_catalog.V3_CATEGORY)
         # order time is required in 3.0; fill the few missing ones before collection
         miss = df["lab_order_dttm"].isna() & df["lab_collect_dttm"].notna()
         if miss.any():

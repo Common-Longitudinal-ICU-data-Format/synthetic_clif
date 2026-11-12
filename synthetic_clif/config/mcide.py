@@ -11,6 +11,8 @@ import shutil
 
 import pandas as pd
 
+from synthetic_clif.config.lab_catalog import CLIF21_LAB_CATEGORIES, LABS
+
 
 class MCIDELoader:
     """Load and manage mCIDE permissible values from CSV files.
@@ -158,44 +160,8 @@ class MCIDELoader:
                 "BiPAP",
                 "Other",
             ],
-            # Labs (abbreviated - common categories)
-            "lab": [
-                "sodium",
-                "potassium",
-                "chloride",
-                "bicarbonate",
-                "bun",
-                "creatinine",
-                "glucose_serum",
-                "calcium_total",
-                "magnesium",
-                "phosphate",
-                "albumin",
-                "total_protein",
-                "ast",
-                "alt",
-                "alkaline_phosphatase",
-                "bilirubin_total",
-                "bilirubin_conjugated",
-                "lactate",
-                "hemoglobin",
-                "wbc",
-                "platelet_count",
-                "inr",
-                "pt",
-                "ptt",
-                "fibrinogen",
-                "d_dimer",
-                "troponin_i",
-                "crp",
-                "procalcitonin",
-                "ph_arterial",
-                "ph_venous",
-                "pco2_arterial",
-                "pco2_venous",
-                "po2_arterial",
-                "so2_central_venous",
-            ],
+            # Labs: the 52 CLIF 2.1.0 categories (see config/lab_catalog.py)
+            "lab": list(CLIF21_LAB_CATEGORIES),
             "lab_type": ["Routine", "STAT", "Timed", "Point of Care"],
             "lab_order": ["bmp", "cbc", "coags", "blood_gas", "lft", "misc"],
             # Medications
@@ -573,44 +539,8 @@ class MCIDELoader:
         return self.get_category("ethnicity")
 
     def get_lab_reference_units(self) -> dict[str, str]:
-        """Get reference units for lab categories."""
-        return {
-            "sodium": "mmol/L",
-            "potassium": "mmol/L",
-            "chloride": "mmol/L",
-            "bicarbonate": "mmol/L",
-            "bun": "mg/dL",
-            "creatinine": "mg/dL",
-            "glucose_serum": "mg/dL",
-            "calcium_total": "mg/dL",
-            "magnesium": "mg/dL",
-            "phosphate": "mg/dL",
-            "albumin": "g/dL",
-            "total_protein": "g/dL",
-            "ast": "U/L",
-            "alt": "U/L",
-            "alkaline_phosphatase": "U/L",
-            "bilirubin_total": "mg/dL",
-            "bilirubin_conjugated": "mg/dL",
-            "lactate": "mmol/L",
-            "hemoglobin": "g/dL",
-            "wbc": "10^3/uL",
-            "platelet_count": "K/uL",
-            "inr": "(no units)",
-            "pt": "sec",
-            "ptt": "sec",
-            "fibrinogen": "mg/dL",
-            "d_dimer": "ng/mL",
-            "troponin_i": "ng/mL",
-            "crp": "mg/L",
-            "procalcitonin": "ng/mL",
-            "ph_arterial": "(no units)",
-            "ph_venous": "(no units)",
-            "pco2_arterial": "mmHg",
-            "pco2_venous": "mmHg",
-            "po2_arterial": "mmHg",
-            "so2_central_venous": "%",
-        }
+        """CLIF 2.1.0 reference units for the lab categories (mCIDE)."""
+        return {k: v.unit_21 for k, v in LABS.items() if v.unit_21 is not None}
 
     def get_lab_reference_ranges(self) -> dict[str, tuple[float, float]]:
         """Get normal reference ranges for lab categories."""
@@ -641,7 +571,8 @@ class MCIDELoader:
             "ptt": (25, 35),
             "fibrinogen": (200, 400),
             "d_dimer": (0, 500),
-            "troponin_i": (0, 0.04),
+            "troponin_i": (0, 26),
+            "troponin_t": (0, 14),
             "crp": (0, 10),
             "procalcitonin": (0, 0.5),
             "ph_arterial": (7.35, 7.45),
