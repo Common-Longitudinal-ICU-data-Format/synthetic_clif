@@ -510,7 +510,8 @@ class HospitalCourse:
             elif lv == 2:
                 device.append("High Flow NC")
                 fio2[i] = float(np.clip(_q(need + 0.05, 0.05), 0.30, 1.0))
-                flow[i] = float(np.clip(_q(30 + 30 * r[i], 5), 30, 60))
+                # high-flow nasal cannula flow is charted as liters per minute (lpm_set)
+                lpm[i] = float(np.clip(_q(30 + 30 * r[i], 5), 30, 60))
             else:
                 device.append("CPAP" if prefers_cpap else "NIPPV")
                 fio2[i] = float(np.clip(_q(need + 0.05, 0.05), 0.30, 1.0))

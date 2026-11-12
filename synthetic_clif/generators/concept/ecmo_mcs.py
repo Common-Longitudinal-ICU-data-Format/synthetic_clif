@@ -28,9 +28,9 @@ MCS_GROUP = {
 class ECMOMCSGenerator(BaseGenerator):
     """Generate synthetic ECMO/MCS data from the shared course."""
 
+    # CLIF 2.1.0 ecmo_mcs columns (as validated by clifpy's 2.1 schema)
     COLUMNS = ["hospitalization_id", "recorded_dttm", "device_name", "device_category", "mcs_group",
-               "sweep_set", "flow", "fdO2_set", "ecmo_configuration_category",
-               "control_parameter_name", "control_parameter_category", "control_parameter_value"]
+               "device_metric_name", "device_rate", "sweep", "flow", "fdO2"]
 
     def generate(self, hospitalizations_df: pd.DataFrame, ecmo_rate: float = 0.02) -> pd.DataFrame:
         """``ecmo_rate`` is kept for compatibility; the course decides who needs support."""
@@ -95,38 +95,31 @@ class ECMOMCSGenerator(BaseGenerator):
                 "device_name": device.lower(),
                 "device_category": device,
                 "mcs_group": group,
-                "sweep_set": None,
+                "device_metric_name": None,
+                "device_rate": None,
+                "sweep": None,
                 "flow": None,
-                "fdO2_set": None,
-                "ecmo_configuration_category": None,
-                "control_parameter_name": None,
-                "control_parameter_category": None,
-                "control_parameter_value": None,
+                "fdO2": None,
             }
             if group == "ECMO":
                 f = float(flow[j] + rng.normal(0, 0.05))
                 rec["flow"] = round(f, 2)
-                rec["sweep_set"] = round(float(sweep[j]) * 2) / 2
-                rec["fdO2_set"] = round(float(fdo2[j]), 2)
-                rec["ecmo_configuration_category"] = device[:2]
-                rec["control_parameter_name"] = "RPM"
-                rec["control_parameter_category"] = "rpm"
-                rec["control_parameter_value"] = float(round(650 * f + 600 + rng.normal(0, 40), -1))
+                rec["sweep"] = round(float(sweep[j]) * 2) / 2
+                rec["fdO2"] = round(float(fdo2[j]), 2)
+                rec["device_metric_name"] = "RPM"
+                rec["device_rate"] = float(round(650 * f + 600 + rng.normal(0, 40), -1))
             elif device.startswith("Impella"):
                 rec["flow"] = round(float(flow[j]), 1)
-                rec["control_parameter_name"] = "P-Level"
-                rec["control_parameter_category"] = "p-level"
-                rec["control_parameter_value"] = float(plevel[j])
+                rec["device_metric_name"] = "P-Level"
+                rec["device_rate"] = float(plevel[j])
             elif device == "CentriMag_LV":
                 f = float(flow[j])
                 rec["flow"] = round(f, 1)
-                rec["control_parameter_name"] = "Speed"
-                rec["control_parameter_category"] = "speed"
-                rec["control_parameter_value"] = float(round(700 * f + 800, -1))
+                rec["device_metric_name"] = "Speed"
+                rec["device_rate"] = float(round(700 * f + 800, -1))
             elif device == "IABP":
                 ratio = 1.0 if wean[j] < 0.4 else 2.0 if wean[j] < 0.8 else 3.0
-                rec["control_parameter_name"] = "Ratio"
-                rec["control_parameter_category"] = "ratio"
-                rec["control_parameter_value"] = ratio
+                rec["device_metric_name"] = "Ratio"
+                rec["device_rate"] = ratio
             rows.append(rec)
         return rows

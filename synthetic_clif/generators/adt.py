@@ -196,15 +196,20 @@ class ADTGenerator(BaseGenerator):
                 joined.append([lo, hi])
 
         cur = t0
-        for lo, hi in joined:
+        for k, (lo, hi) in enumerate(joined):
+            lo = max(lo, cur)  # a stepdown stay can run into the next ICU stay
+            if hi <= lo:
+                continue
             if lo > cur:
                 segs.append((cur, lo, "ward"))
             segs.append((lo, hi, "icu"))
             cur = hi
             if cur < los_h - 6 and self.rng.random() < 0.35:
-                sd = min(cur + self.rng.uniform(12, 48), los_h)
-                segs.append((cur, sd, "stepdown"))
-                cur = sd
+                next_icu = joined[k + 1][0] if k + 1 < len(joined) else los_h
+                sd = min(cur + self.rng.uniform(12, 48), los_h, next_icu)
+                if sd > cur:
+                    segs.append((cur, sd, "stepdown"))
+                    cur = sd
         if cur < los_h:
             segs.append((cur, los_h, "ward" if joined or self.rng.random() < 0.6 else "stepdown"))
 

@@ -127,8 +127,17 @@ class LabsGenerator(BaseGenerator):
                 continue
             if pd.isna(discharge_time):
                 discharge_time = admit_time + timedelta(days=5)
-            records.extend(self._generate_hospitalization_labs(
-                hosp["hospitalization_id"], admit_time, discharge_time, course=course_for_row(hosp)))
+            # No specimen is collected after the patient leaves (or dies), and a
+            # panel overlap (e.g. bicarbonate on a BMP and a blood gas drawn
+            # together) reports one result per analyte per collection
+            seen = set()
+            for rec in self._generate_hospitalization_labs(
+                    hosp["hospitalization_id"], admit_time, discharge_time, course=course_for_row(hosp)):
+                key = (rec["lab_collect_dttm"], rec["lab_category"])
+                if rec["lab_collect_dttm"] > discharge_time or key in seen:
+                    continue
+                seen.add(key)
+                records.append(rec)
 
         df = pd.DataFrame(records)
 

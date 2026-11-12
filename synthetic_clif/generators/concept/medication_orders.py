@@ -70,6 +70,18 @@ class MedicationOrdersGenerator(BaseGenerator):
         if len(df) > 0:
             for col in ("order_start_dttm", "order_end_dttm", "ordered_dttm"):
                 df[col] = pd.to_datetime(df[col], utc=True)
+            if hospitalizations_df is not None and len(hospitalizations_df):
+                # an order is written during the stay: not before admission
+                admit = pd.Series(
+                    pd.to_datetime(hospitalizations_df["admission_dttm"], utc=True).values,
+                    index=hospitalizations_df["hospitalization_id"],
+                )
+                admit = admit[~admit.index.duplicated()]
+                adm = pd.to_datetime(df["hospitalization_id"].map(admit), utc=True)
+                early = adm.notna() & (df["ordered_dttm"] < adm)
+                df.loc[early, "ordered_dttm"] = adm[early].where(
+                    adm[early] <= df.loc[early, "order_start_dttm"], df.loc[early, "order_start_dttm"]
+                )
         return df
 
     # ------------------------------------------------------------------
