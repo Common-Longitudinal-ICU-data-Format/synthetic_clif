@@ -103,8 +103,13 @@ class TestDrain:
         assert (removed.removed_dttm >= removed.placed_dttm).all()
         assert (removed.removed_dttm <= removed.discharge_dttm).all()
 
-    def test_gastric_tube_with_every_intubation(self, tables):
-        intubated = set(tables["airway"].hospitalization_id)
+    def test_gastric_tube_with_every_intubation(self, tables, stays):
+        # the tube goes in within two hours of intubation, so a patient who
+        # dies or is extubated sooner may never get one
+        ett = tables["airway"]
+        ett = ett[ett.airway_category == "ett"].join(stays[["discharge_dttm"]], on="hospitalization_id")
+        out = ett.removed_dttm.fillna(ett.discharge_dttm).clip(upper=ett.discharge_dttm)
+        intubated = set(ett[out - ett.placed_dttm >= pd.Timedelta(2, unit="h")].hospitalization_id)
         d = tables["drain"]
         gastric = set(d[d.drain_category.isin(["og_tube", "ng_tube"])].hospitalization_id)
         assert intubated and intubated <= gastric
