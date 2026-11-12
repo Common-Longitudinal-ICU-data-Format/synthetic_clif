@@ -116,7 +116,7 @@ With `--clif-version 2.1`, the package generates all 28 CLIF 2.1.0 tables (the d
 | hospitalization | Hospital encounters (admissions 2018-2024) |
 | adt | Admission/discharge/transfer events |
 | vitals | Vital signs (HR, BP, SpO2, temp, RR) |
-| labs | Laboratory results (52 categories) |
+| labs | Laboratory results (all 52 CLIF 2.1.0 categories) |
 | respiratory_support | Ventilator settings and oxygen delivery |
 | medication_admin_continuous | IV infusions (vasopressors, sedatives) |
 | medication_admin_intermittent | Scheduled and PRN medications |
@@ -161,7 +161,14 @@ a 2.1 run.
 - **New columns:** `adt.room_id`/`bed_id`, `vitals.measured_dttm`,
   `labs.loinc_version`, `administering_provider_id` on medication
   administrations (linked to the `provider` table), `patient.language_interpreter`
-  and others. Troponin is reported in ng/L.
+  and others.
+- **Labs:** the 52 2.1 categories plus seven that exist only in 3.0.0
+  (hematocrit, fibrinogen, D-dimer, mixed venous PO2, BNP, NT-proBNP and
+  triglycerides), 58 in all because serum and fingerstick glucose merge into
+  `glucose`. Units and order categories follow the 3.0.0 lab list, so
+  fingerstick glucose is `poc`, troponin is `cardiac` in ng/L, CRP and
+  procalcitonin are `inflammatory`, and mixed venous gases are
+  `mixed_venous_blood_gas`.
 - **New tables derived from existing data:** `airway` (from IMV episodes and
   tracheostomy), `misc_icu_orders` (extubation orders), `line` (from
   vasopressors, CRRT, invasive hemodynamics) and `ed_encounter` (from ED ADT rows).
@@ -192,6 +199,8 @@ The synthetic data includes realistic artifacts found in real EHR data. [CHANGEL
   - Ventilator settings persist through an IMV episode (tidal volume 6-8 mL/kg predicted body weight, ARDSNet PEEP); plateau, peak pressure and minute ventilation follow from the settings
   - Sedation and analgesia run during IMV episodes
   - Labs keep each patient's baseline from day to day; BUN tracks creatinine, chloride follows the anion gap, and blood-gas pH follows Henderson-Hasselbalch
+  - The differential sums to 100% and matches the WBC, shifting to neutrophils with infection; conjugated and unconjugated bilirubin add up to the total; SaO2 follows PaO2; ionized calcium follows total calcium, albumin, pH and transfusion
+  - Fingerstick glucose is checked about hourly on an insulin drip, mixed venous gases come only with a PA catheter, troponin and BNP rise with cardiogenic shock, fibrinogen and D-dimer move with sepsis, bleeding and cryoprecipitate, and triglycerides are checked on propofol
 - **Every table follows the course** - Clinical decisions are layered on the same course (`physiology/events.py`), and the other tables record them:
   - Who dies, where survivors go, and code status depend on peak illness, organ support and age; only a patient's last stay can end in death, and `death_dttm` matches it
   - ICU stays cover ventilator, vasopressor and CRRT time; RASS, GCS and CAM-ICU follow sedation depth and delirium
