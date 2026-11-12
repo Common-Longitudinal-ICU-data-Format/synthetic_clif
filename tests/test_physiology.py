@@ -138,6 +138,10 @@ class TestLabs:
                            columns="lab_category", values="lab_value_numeric", aggfunc="first")
         p = w.dropna(subset=["bun", "creatinine"])
         assert np.corrcoef(p["bun"], p["creatinine"])[0, 1] > 0.5
+        # bicarbonate from the gas itself, not a chemistry panel drawn the same minute
+        bg = lb[lb["lab_order_category"] == "blood_gas"]
+        w = bg.pivot_table(index=["hospitalization_id", "lab_collect_dttm"],
+                           columns="lab_category", values="lab_value_numeric", aggfunc="first")
         gas = w.dropna(subset=["ph_arterial", "pco2_arterial", "bicarbonate"])
         assert len(gas) > 10
         hh = 6.1 + np.log10(gas["bicarbonate"] / (0.0307 * gas["pco2_arterial"]))

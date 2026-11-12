@@ -41,10 +41,13 @@ python -m synthetic_clif --hospitalizations 100 --output data/v21/ --clif-versio
   - `patient.py`: Demographics (patient table)
   - `hospitalization.py`: Hospital encounters with admission/discharge times
   - `vitals.py`: Vital signs with temporal autocorrelation
-  - `labs.py`: Laboratory results with reference ranges
+  - `labs.py`: Laboratory panels and when they are ordered; values come from the course
   - `medications.py`: Continuous and intermittent medication administration
   - `respiratory.py`: Respiratory support and ventilator settings
   - Additional generators for each CLIF table
+- **`synthetic_clif/config/lab_catalog.py`**: one entry per lab category with its 2.1 and 3.0
+  unit, order category, LOINC code and fallback range. Labs with no 2.1 unit are 3.0-only and
+  are dropped from 2.1 output; add new labs here first
 - **`synthetic_clif/clif3/`**: CLIF 3.0.0 support. `schema.py` loads the vendored
   `clif3_schema.json` (rebuild with `tools/build_clif3_schema.py`), `vocab.py`
   maps 2.1 values to 3.0, `convert.py` turns the generated 2.1 tables into 3.0

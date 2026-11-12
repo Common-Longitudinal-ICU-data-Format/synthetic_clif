@@ -12,6 +12,7 @@ from synthetic_clif.generators.hospitalization import HospitalizationGenerator
 from synthetic_clif.generators.adt import ADTGenerator
 from synthetic_clif.generators.vitals import VitalsGenerator
 from synthetic_clif.generators.labs import LabsGenerator
+from synthetic_clif.config.lab_catalog import CLIF3_ONLY as CLIF3_ONLY_LABS
 from synthetic_clif.generators.respiratory import RespiratoryGenerator
 from synthetic_clif.generators.medications import (
     MedicationContinuousGenerator,
@@ -256,6 +257,15 @@ class SyntheticCLIFDataset:
             respiratory = self.respiratory_gen.generate(course_hosps)
             self._tables["respiratory_support"] = respiratory
             _log("respiratory_support", t, len(respiratory))
+
+        if self.clif_version == "2.1":
+            # labs that exist only in the CLIF 3.0.0 vocabulary (hematocrit,
+            # fibrinogen, BNP, ...) are generated for every run so both
+            # versions share a seed; 2.1.0 output leaves them out
+            labs = self._tables["labs"]
+            if len(labs):
+                keep = ~labs["lab_category"].isin(CLIF3_ONLY_LABS)
+                self._tables["labs"] = labs[keep].reset_index(drop=True)
 
         # Generate remaining time-series tables (reference self._tables for deps)
         respiratory = self._tables["respiratory_support"]

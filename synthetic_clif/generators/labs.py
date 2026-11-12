@@ -1,14 +1,13 @@
 """Labs table generator."""
 
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import datetime, timedelta
+from typing import Optional, Sequence
 
 import numpy as np
 import pandas as pd
 
 from synthetic_clif.generators.base import BaseGenerator
-from synthetic_clif.config.mcide import MCIDELoader
-from synthetic_clif.utils.timestamps import generate_ordered_timestamps
+from synthetic_clif.config.lab_catalog import LABS
 from synthetic_clif.physiology.course import HospitalCourse, course_for_row
 
 
@@ -18,138 +17,91 @@ class LabsGenerator(BaseGenerator):
     Creates labs table with:
     - hospitalization_id (foreign key)
     - lab_order_dttm, lab_collect_dttm, lab_result_dttm (ordered timestamps)
-    - lab_category (mCIDE categories)
-    - lab_value, lab_value_numeric (with realistic ranges)
-    - reference_unit (standard units)
-    - lab_order_category (blood_gas, bmp, cbc, coags, lft, misc per CLIF 2.1.0)
-    - lab_order_name, lab_name, lab_specimen_name, lab_specimen_category, lab_loinc_code
+    - lab_category: all 52 CLIF 2.1.0 categories, plus the CLIF 3.0.0-only
+      categories in ``lab_catalog.CLIF3_ONLY`` (dropped from 2.1.0 output)
+    - lab_value, lab_value_numeric, reference_unit (mCIDE units, see
+      ``synthetic_clif/config/lab_catalog.py``)
+    - lab_order_category, lab_order_name, lab_name, lab_specimen_name,
+      lab_specimen_category, lab_loinc_code
 
     Features:
     - Values observed from the shared course (synthetic_clif.physiology):
       each patient has their own baseline, values persist day to day, and
       linked labs move together (creatinine/BUN, lactate/bicarbonate/pH,
-      Na - Cl - HCO3 anion gap, Henderson-Hasselbalch pH)
-    - Daily routine labs, serial lactates on vasopressors, blood gases on IMV
+      Na - Cl - HCO3 anion gap, Henderson-Hasselbalch pH, a differential that
+      sums to 100% with absolute counts that match the WBC, conjugated +
+      unconjugated = total bilirubin, SaO2 from PaO2, ionized from total calcium)
+    - Ordering follows the course: daily BMP/CBC with magnesium and phosphate,
+      serial lactates on vasopressors, blood gases on IMV, mixed venous gases
+      with a PA catheter, fingerstick glucose on insulin, inflammatory markers
+      when infection is suspected, serial troponins in cardiogenic shock,
+      DIC labs in shock or bleeding, triglycerides on propofol
     - Proper timestamp ordering: order < collect < result
-    - ~10% missingness for less common labs
     """
 
-    # LOINC codes by lab category
-    LAB_LOINC_CODES = {
-        "sodium": "2951-2", "potassium": "2823-3", "chloride": "2075-0",
-        "bicarbonate": "1963-8", "bun": "3094-0", "creatinine": "2160-0",
-        "glucose_serum": "2345-7", "calcium_total": "17861-6",
-        "albumin": "1751-7", "total_protein": "2885-2",
-        "ast": "1920-8", "alt": "1742-6", "alkaline_phosphatase": "6768-6",
-        "bilirubin_total": "1975-2", "bilirubin_conjugated": "1968-7",
-        "hemoglobin": "718-7", "wbc": "6690-2", "platelet_count": "777-3",
-        "inr": "6301-6", "pt": "5902-2", "ptt": "3173-2",
-        "lactate": "2524-7", "troponin_i": "10839-9", "crp": "1988-5",
-        "procalcitonin": "33959-8", "ph_arterial": "2744-1",
-        "pco2_arterial": "2019-8", "po2_arterial": "2703-7",
-        "ph_venous": "2746-6", "pco2_venous": "2021-4",
-        "so2_central_venous": "2716-9",
-        "fibrinogen": "3255-7", "d_dimer": "48065-7",
-        "magnesium": "19123-9", "phosphate": "2777-1",
-    }
+    LAB_LOINC_CODES = {k: v.loinc for k, v in LABS.items()}
+    LAB_PARAMS = {k: v.params for k, v in LABS.items()}
 
-    # Panel name to human-readable order name
     PANEL_TO_ORDER_NAME = {
         "basic_metabolic": "Basic Metabolic Panel",
         "comprehensive_metabolic": "Comprehensive Metabolic Panel",
+        "mg_phos": "Magnesium and Phosphorus",
         "cbc": "Complete Blood Count",
+        "cbc_diff": "CBC with Differential",
         "coagulation": "Coagulation Panel",
+        "dic": "Fibrinogen and D-Dimer",
         "abg_arterial": "Arterial Blood Gas",
         "abg_venous": "Venous Blood Gas",
+        "mixed_venous": "Mixed Venous Blood Gas",
         "lactate": "Lactate",
         "liver": "Hepatic Function Panel",
-        "cardiac": "Cardiac Panel",
+        "cardiac": "Cardiac Biomarkers",
         "inflammatory": "Inflammatory Markers",
+        "fingerstick": "POC Glucose",
+        "triglycerides": "Triglycerides",
     }
 
-    # Lab panels (labs typically ordered together)
+    _CBC = ["hemoglobin", "hematocrit", "wbc", "platelet_count"]
+    _DIFF = [f"{c}_{k}" for c in ("neutrophils", "lymphocytes", "monocytes", "eosinophils", "basophils")
+             for k in ("percent", "absolute")]
+
     LAB_PANELS = {
-        "basic_metabolic": [
-            "sodium",
-            "potassium",
-            "chloride",
-            "bicarbonate",
-            "bun",
-            "creatinine",
-            "glucose_serum",
-        ],
-        "comprehensive_metabolic": [
-            "sodium",
-            "potassium",
-            "chloride",
-            "bicarbonate",
-            "bun",
-            "creatinine",
-            "glucose_serum",
-            "calcium_total",
-            "albumin",
-            "total_protein",
-            "ast",
-            "alt",
-            "alkaline_phosphatase",
-            "bilirubin_total",
-        ],
-        "cbc": ["hemoglobin", "wbc", "platelet_count"],
+        "basic_metabolic": ["sodium", "potassium", "chloride", "bicarbonate", "bun", "creatinine",
+                            "glucose_serum"],
+        "comprehensive_metabolic": ["sodium", "potassium", "chloride", "bicarbonate", "bun",
+                                    "creatinine", "glucose_serum", "calcium_total", "albumin",
+                                    "total_protein", "ast", "alt", "alkaline_phosphatase",
+                                    "bilirubin_total"],
+        "mg_phos": ["magnesium", "phosphate"],
+        "cbc": _CBC,
+        "cbc_diff": _CBC + _DIFF,
         "coagulation": ["inr", "pt", "ptt"],
-        "abg_arterial": ["ph_arterial", "pco2_arterial", "po2_arterial", "bicarbonate"],
+        "dic": ["fibrinogen", "d_dimer"],
+        # the blood gas analyser reports SaO2 and ionized calcium with the gas
+        "abg_arterial": ["ph_arterial", "pco2_arterial", "po2_arterial", "so2_arterial",
+                         "bicarbonate", "calcium_ionized"],
         "abg_venous": ["ph_venous", "pco2_venous", "so2_central_venous", "bicarbonate"],
+        "mixed_venous": ["so2_mixed_venous", "po2_mixed_venous"],
         "lactate": ["lactate"],
-        "liver": [
-            "ast",
-            "alt",
-            "alkaline_phosphatase",
-            "bilirubin_total",
-            "bilirubin_conjugated",
-            "albumin",
-        ],
-        "cardiac": ["troponin_i", "procalcitonin"],
+        "liver": ["ast", "alt", "alkaline_phosphatase", "bilirubin_total", "bilirubin_conjugated",
+                  "bilirubin_unconjugated", "albumin", "ldh"],
+        "cardiac": ["troponin_i"],
         "inflammatory": ["crp", "procalcitonin"],
+        "fingerstick": ["glucose_fingerstick"],
+        "triglycerides": ["triglycerides"],
     }
 
-    # Lab parameters: (mean, std, lower_bound, upper_bound)
-    LAB_PARAMS = {
-        "sodium": (140, 3, 120, 160),
-        "potassium": (4.0, 0.5, 2.5, 7.0),
-        "chloride": (102, 3, 90, 115),
-        "bicarbonate": (24, 3, 5, 45),
-        "bun": (15, 8, 5, 100),
-        "creatinine": (1.0, 0.5, 0.3, 10.0),
-        "glucose_serum": (110, 40, 40, 500),
-        "calcium_total": (9.0, 0.6, 6.0, 14.0),
-        "magnesium": (2.0, 0.3, 1.0, 4.0),
-        "phosphate": (3.5, 0.8, 1.5, 8.0),
-        "albumin": (3.5, 0.6, 1.5, 5.5),
-        "total_protein": (7.0, 0.8, 4.0, 10.0),
-        "ast": (30, 20, 10, 500),
-        "alt": (30, 20, 10, 500),
-        "alkaline_phosphatase": (80, 30, 30, 500),
-        "bilirubin_total": (0.8, 0.5, 0.1, 20.0),
-        "bilirubin_conjugated": (0.2, 0.2, 0, 10.0),
-        "lactate": (1.5, 1.0, 0.3, 20.0),
-        "hemoglobin": (12, 2, 5, 18),
-        "wbc": (8, 4, 0.5, 50),
-        "platelet_count": (220, 80, 10, 800),
-        "inr": (1.1, 0.3, 0.8, 10.0),
-        "pt": (12, 2, 9, 50),
-        "ptt": (30, 5, 20, 120),
-        "fibrinogen": (300, 80, 100, 800),
-        "d_dimer": (300, 200, 0, 10000),
-        "troponin_i": (0.02, 0.02, 0, 10),
-        "crp": (5, 10, 0, 300),
-        "procalcitonin": (0.3, 0.5, 0, 50),
-        # Arterial blood gas values
-        "ph_arterial": (7.40, 0.05, 6.8, 7.7),
-        "pco2_arterial": (40, 5, 15, 120),
-        "po2_arterial": (85, 15, 40, 500),
-        # Venous blood gas values (slightly different physiology)
-        "ph_venous": (7.36, 0.05, 6.8, 7.7),
-        "pco2_venous": (46, 5, 20, 130),
-        "so2_central_venous": (70, 8, 40, 90),
+    _GASES = ("abg_arterial", "abg_venous", "mixed_venous")
+
+    _SPECIMEN = {
+        "abg_arterial": "Arterial Blood",
+        "abg_venous": "Venous Blood",
+        "mixed_venous": "Mixed Venous Blood",
+        "cbc": "Whole Blood",
+        "cbc_diff": "Whole Blood",
+        "fingerstick": "Capillary Blood",
+        "coagulation": "Plasma",
+        "dic": "Plasma",
     }
 
     def generate(
@@ -167,27 +119,20 @@ class LabsGenerator(BaseGenerator):
             DataFrame with labs table columns
         """
         records = []
-        reference_units = self.mcide.get_lab_reference_units()
 
         for _, hosp in hospitalizations_df.iterrows():
-            hosp_id = hosp["hospitalization_id"]
             admit_time = hosp["admission_dttm"]
             discharge_time = hosp["discharge_dttm"]
-
             if pd.isna(admit_time):
                 continue
-
             if pd.isna(discharge_time):
                 discharge_time = admit_time + timedelta(days=5)
-
-            hosp_labs = self._generate_hospitalization_labs(
-                hosp_id, admit_time, discharge_time, reference_units, course_for_row(hosp)
-            )
             # No specimen is collected after the patient leaves (or dies), and a
             # panel overlap (e.g. bicarbonate on a BMP and a blood gas drawn
             # together) reports one result per analyte per collection
             seen = set()
-            for rec in hosp_labs:
+            for rec in self._generate_hospitalization_labs(
+                    hosp["hospitalization_id"], admit_time, discharge_time, course=course_for_row(hosp)):
                 key = (rec["lab_collect_dttm"], rec["lab_category"])
                 if rec["lab_collect_dttm"] > discharge_time or key in seen:
                     continue
@@ -197,239 +142,240 @@ class LabsGenerator(BaseGenerator):
         df = pd.DataFrame(records)
 
         if len(df) > 0:
-            df["lab_order_dttm"] = pd.to_datetime(df["lab_order_dttm"], utc=True)
-            df["lab_collect_dttm"] = pd.to_datetime(df["lab_collect_dttm"], utc=True)
-            df["lab_result_dttm"] = pd.to_datetime(df["lab_result_dttm"], utc=True)
-
-            # Add missingness
+            for col in ("lab_order_dttm", "lab_collect_dttm", "lab_result_dttm"):
+                df[col] = pd.to_datetime(df[col], utc=True)
             df = self.add_missingness(df, "lab_value_numeric", missingness_rate)
             df = self.add_missingness(df, "lab_order_dttm", 0.02)
 
         return df
 
+    # ------------------------------------------------------------------
+    # Ordering
+    # ------------------------------------------------------------------
     def _generate_hospitalization_labs(
         self,
         hospitalization_id: str,
         admit_time: datetime,
         discharge_time: datetime,
-        reference_units: dict[str, str],
+        reference_units: Optional[dict] = None,
         course: Optional[HospitalCourse] = None,
     ) -> list[dict]:
         """Generate all labs for one hospitalization."""
-        records = []
+        records: list[dict] = []
         self._course = course
         los_hours = (discharge_time - admit_time).total_seconds() / 3600
         los_days = los_hours / 24
+        rng = self.rng
 
-        # Admission labs (comprehensive)
-        admission_labs = self._generate_admission_labs(
-            hospitalization_id, admit_time, reference_units
-        )
-        records.extend(admission_labs)
+        def draw(hours, panel, lab_type, labs=None):
+            if 0 <= hours < los_hours:
+                records.extend(self._generate_panel(
+                    hospitalization_id, admit_time + timedelta(hours=float(hours)), panel,
+                    lab_type, labs=labs))
 
-        # Daily routine labs (BMP + CBC)
+        ext = course.lab_ext_base if course is not None else {}
+        cardiac_labs = [ext.get("troponin", "troponin_i")]
+        natriuretic = ext.get("natriuretic", "bnp")
+
+        # Admission labs
+        records.extend(self._generate_admission_labs(hospitalization_id, admit_time))
+        draw(0.05, "mg_phos", "STAT")
+        if rng.random() < 0.15:
+            draw(0.08, "liver", "STAT")
+        if rng.random() < 0.15:
+            draw(0.08, "dic", "STAT")
+        if rng.random() < 0.45:
+            labs = cardiac_labs + ([natriuretic] if rng.random() < 0.5 else [])
+            draw(0.1, "cardiac", "STAT", labs)
+        if rng.random() < 0.08:
+            draw(0.1, "inflammatory", "STAT", ["crp", "esr"])
+        if rng.random() < 0.06:
+            draw(0.1, "inflammatory", "STAT", ["ferritin"])
+
+        def sick(day: int) -> bool:
+            return course is not None and course.severity[course._i(day * 24)] > 0.35
+
+        # Daily routine labs: BMP (CMP every third day), magnesium and
+        # phosphate, CBC (with differential some days), LFTs when sick
         current_day = 1
         while current_day < los_days:
-            lab_time = admit_time + timedelta(days=current_day, hours=int(self.rng.integers(4, 8)))
-            if lab_time >= discharge_time:
+            h = current_day * 24 + float(rng.integers(4, 8))
+            if h >= los_hours:
                 break
-
-            # BMP daily
-            records.extend(
-                self._generate_panel(
-                    hospitalization_id,
-                    lab_time,
-                    "basic_metabolic",
-                    "Routine",
-                    reference_units,
-                )
-            )
-
-            # CBC every 1-2 days
-            if current_day % 2 == 0 or self.rng.random() < 0.5:
-                records.extend(
-                    self._generate_panel(
-                        hospitalization_id,
-                        lab_time + timedelta(minutes=5),
-                        "cbc",
-                        "Routine",
-                        reference_units,
-                    )
-                )
-
+            draw(h, "comprehensive_metabolic" if current_day % 3 == 0 else "basic_metabolic", "Routine")
+            if sick(current_day) or rng.random() < 0.5:
+                draw(h + 0.05, "mg_phos", "Routine")
+            if current_day % 2 == 0 or rng.random() < 0.5:
+                draw(h + 0.08, "cbc_diff" if rng.random() < 0.4 else "cbc", "Routine")
+            if sick(current_day) and current_day % 2 == 1 and rng.random() < 0.6:
+                draw(h + 0.1, "liver", "Routine")
             current_day += 1
 
-        # PRN labs (lactate, ABG, coags)
-        n_prn = int(los_days * self.rng.uniform(0.5, 2))
+        # PRN labs (lactate, blood gas, coags, troponin)
+        n_prn = int(los_days * rng.uniform(0.5, 2))
         for _ in range(n_prn):
-            prn_time = admit_time + timedelta(hours=self.rng.uniform(0, los_hours))
-            # 70% arterial, 30% venous blood gas draws (ICU practice)
-            abg_panel = self.rng.choice(
-                ["abg_arterial", "abg_venous"], p=[0.7, 0.3]
-            )
-            panel = self.rng.choice(["lactate", abg_panel, "coagulation", "cardiac"])
-            lab_type = self.rng.choice(["STAT", "Point of Care"], p=[0.7, 0.3])
+            prn_h = rng.uniform(0, los_hours)
+            abg_panel = rng.choice(["abg_arterial", "abg_venous"], p=[0.7, 0.3])
+            panel = str(rng.choice(["lactate", abg_panel, "coagulation", "cardiac"]))
+            lab_type = rng.choice(["STAT", "Point of Care"], p=[0.7, 0.3])
+            draw(prn_h, panel, lab_type, cardiac_labs if panel == "cardiac" else None)
 
-            records.extend(
-                self._generate_panel(
-                    hospitalization_id, prn_time, panel, lab_type, reference_units
-                )
-            )
-
-        # Course-driven draws: serial lactates on vasopressors, blood gases on IMV
         if course is not None:
-            for start, end in _runs(course.ne_eq > 0):
-                h = start + self.rng.uniform(0.5, 2)
-                while h < min(end, course.n_hours - 2) and h < los_hours:
-                    records.extend(self._generate_panel(
-                        hospitalization_id, admit_time + timedelta(hours=float(h)),
-                        "lactate", "STAT", reference_units))
-                    h += self.rng.uniform(4, 8)
-            for start, end in course.imv_episodes:
-                h = start + self.rng.uniform(0.5, 1.5)   # post-intubation gas
-                while h < min(end, course.n_hours - 2) and h < los_hours:
-                    records.extend(self._generate_panel(
-                        hospitalization_id, admit_time + timedelta(hours=float(h)),
-                        "abg_arterial", "STAT", reference_units))
-                    h += self.rng.uniform(8, 16)
+            self._course_driven_labs(course, los_hours, draw, cardiac_labs, natriuretic)
         self._course = None
         return records
+
+    def _course_driven_labs(self, course, los_hours, draw, cardiac_labs, natriuretic) -> None:
+        """Draws that follow the course (each one goes through ``draw``)."""
+        rng = self.rng
+        end_h = min(course.n_hours - 2, los_hours)
+
+        # Serial lactates on vasopressors
+        for start, end in _runs(course.ne_eq > 0):
+            h = start + rng.uniform(0.5, 2)
+            while h < min(end, end_h):
+                draw(h, "lactate", "STAT")
+                h += rng.uniform(4, 8)
+
+        # Blood gases on IMV
+        for start, end in course.imv_episodes:
+            h = start + rng.uniform(0.5, 1.5)   # post-intubation gas
+            while h < min(end, end_h):
+                draw(h, "abg_arterial", "STAT")
+                h += rng.uniform(8, 16)
+
+        # Mixed venous gases while a PA catheter is in place
+        if course.pa_catheter is not None:
+            for start, end in _runs(course.pa_catheter):
+                h = start + rng.uniform(0.5, 2)
+                while h < min(end, end_h):
+                    draw(h, "mixed_venous", "STAT")
+                    h += rng.uniform(6, 12)
+
+        # Fingerstick glucose: about hourly on an insulin infusion, every
+        # six hours for other diabetic patients
+        for start, end in _runs(course.insulin):
+            h = start + rng.uniform(0, 1)
+            while h < min(end, end_h):
+                draw(h, "fingerstick", "Point of Care")
+                h += rng.uniform(0.8, 1.4)
+        if course.diabetic:
+            h = rng.uniform(4, 8)
+            while h < end_h:
+                if not course.insulin[course._i(h)]:
+                    draw(h, "fingerstick", "Point of Care")
+                h += rng.uniform(5, 7)
+
+        # Infection suspected: CRP and procalcitonin (sometimes ESR, ferritin,
+        # D-dimer), then procalcitonin every one to two days
+        if course.infection_recognized_h is not None:
+            h0 = float(course.infection_recognized_h) + rng.uniform(0, 1)
+            labs = ["crp", "procalcitonin"]
+            if rng.random() < 0.3:
+                labs.append("esr")
+            if rng.random() < 0.3:
+                labs.append("ferritin")
+            draw(h0, "inflammatory", "STAT", labs)
+            if rng.random() < 0.3:
+                draw(h0 + 0.1, "dic", "STAT", ["d_dimer"])
+            h = h0
+            for _ in range(int(rng.integers(0, 4))):
+                h += rng.uniform(24, 48)
+                draw(h, "inflammatory", "Timed", ["procalcitonin"])
+
+        # Cardiogenic shock: serial troponins and a natriuretic peptide
+        shock_on = course.shock > 0.3
+        if course.shock_type == "cardiogenic" and shock_on.any():
+            h0 = float(np.argmax(shock_on)) + rng.uniform(0, 2)
+            draw(h0, "cardiac", "STAT", cardiac_labs + [natriuretic])
+            for k in (1, 2):
+                draw(h0 + 6 * k + rng.uniform(-0.5, 0.5), "cardiac", "Timed", cardiac_labs)
+
+        # Severe shock or bleeding: fibrinogen, D-dimer and coags every 12-24 h
+        bleeding = course.bleed > 1.0 if course.bleed is not None else np.zeros(course.n_hours, bool)
+        for start, end in _runs((course.shock > 0.6) | bleeding):
+            h = start + rng.uniform(1, 4)
+            while h < min(end, end_h):
+                draw(h, "dic", "STAT")
+                draw(h + 0.02, "coagulation", "STAT")
+                h += rng.uniform(12, 24)
+
+        # Triglycerides after two days of propofol, then every three days on it
+        prop = course.propofol_hours
+        if prop[-1] >= 48:
+            h = float(np.argmax(prop >= 48)) + rng.uniform(0, 6)
+            while h < end_h:
+                draw(h, "triglycerides", "Routine")
+                nxt = h + rng.uniform(60, 84)
+                if prop[course._i(nxt)] <= prop[course._i(h)]:
+                    break  # propofol stopped
+                h = nxt
 
     def _generate_admission_labs(
         self,
         hospitalization_id: str,
         admit_time: datetime,
-        reference_units: dict[str, str],
+        reference_units: Optional[dict] = None,
     ) -> list[dict]:
         """Generate comprehensive admission labs."""
         records = []
-
-        # Comprehensive metabolic panel
-        records.extend(
-            self._generate_panel(
-                hospitalization_id,
-                admit_time,
-                "comprehensive_metabolic",
-                "STAT",
-                reference_units,
-            )
-        )
-
-        # CBC
-        records.extend(
-            self._generate_panel(
-                hospitalization_id,
-                admit_time + timedelta(minutes=2),
-                "cbc",
-                "STAT",
-                reference_units,
-            )
-        )
-
-        # Coagulation
-        records.extend(
-            self._generate_panel(
-                hospitalization_id,
-                admit_time + timedelta(minutes=4),
-                "coagulation",
-                "STAT",
-                reference_units,
-            )
-        )
-
+        records.extend(self._generate_panel(hospitalization_id, admit_time,
+                                            "comprehensive_metabolic", "STAT"))
+        records.extend(self._generate_panel(hospitalization_id, admit_time + timedelta(minutes=2),
+                                            "cbc_diff", "STAT"))
+        records.extend(self._generate_panel(hospitalization_id, admit_time + timedelta(minutes=4),
+                                            "coagulation", "STAT"))
         # ABG (for ICU admits, ~50%); 70% arterial, 30% venous
         if self.rng.random() < 0.5:
-            abg_panel = self.rng.choice(
-                ["abg_arterial", "abg_venous"], p=[0.7, 0.3]
-            )
-            records.extend(
-                self._generate_panel(
-                    hospitalization_id,
-                    admit_time + timedelta(minutes=10),
-                    abg_panel,
-                    "STAT",
-                    reference_units,
-                )
-            )
-
-        # Lactate
-        records.extend(
-            self._generate_panel(
-                hospitalization_id,
-                admit_time + timedelta(minutes=6),
-                "lactate",
-                "STAT",
-                reference_units,
-            )
-        )
-
+            abg_panel = self.rng.choice(["abg_arterial", "abg_venous"], p=[0.7, 0.3])
+            records.extend(self._generate_panel(hospitalization_id,
+                                                admit_time + timedelta(minutes=10), abg_panel, "STAT"))
+        records.extend(self._generate_panel(hospitalization_id, admit_time + timedelta(minutes=6),
+                                            "lactate", "STAT"))
         return records
 
-    # Map panel names to CLIF 2.1.0 lab_order_category values
-    PANEL_TO_ORDER_CATEGORY = {
-        "basic_metabolic": "bmp",
-        "comprehensive_metabolic": "bmp",
-        "cbc": "cbc",
-        "coagulation": "coags",
-        "abg_arterial": "blood_gas",
-        "abg_venous": "blood_gas",
-        "lactate": "blood_gas",
-        "liver": "lft",
-        "cardiac": "misc",
-        "inflammatory": "misc",
-    }
-
+    # ------------------------------------------------------------------
+    # One panel
+    # ------------------------------------------------------------------
     def _generate_panel(
         self,
         hospitalization_id: str,
         order_time: datetime,
         panel_name: str,
         lab_type: str,
-        reference_units: dict[str, str],
+        reference_units: Optional[dict] = None,
+        labs: Optional[Sequence[str]] = None,
     ) -> list[dict]:
-        """Generate a lab panel."""
+        """Generate one panel (``labs`` overrides the panel's usual tests)."""
         records = []
-        labs = self.LAB_PANELS.get(panel_name, [panel_name])
-        order_category = self.PANEL_TO_ORDER_CATEGORY.get(panel_name, "misc")
+        if labs is None:
+            labs = self.LAB_PANELS.get(panel_name, [panel_name])
+        labs = [c for c in labs if c in LABS]
 
-        # Generate ordered timestamps: order -> collect -> result
-        collect_delay = int(self.rng.integers(5, 30))  # minutes
-        result_delay = int(self.rng.integers(30, 180))  # minutes
+        if panel_name == "fingerstick":
+            collect_delay, result_delay = 0, int(self.rng.integers(1, 4))
+        elif lab_type == "Point of Care" or panel_name in self._GASES:
+            collect_delay, result_delay = int(self.rng.integers(2, 15)), int(self.rng.integers(5, 25))
+        else:
+            collect_delay = int(self.rng.integers(5, 30))
+            result_delay = int(self.rng.integers(30, 180))
 
         collect_time = order_time + timedelta(minutes=collect_delay)
         result_time = collect_time + timedelta(minutes=result_delay)
 
         course = getattr(self, "_course", None)
         observed = course.labs_at(collect_time, labs, self.rng) if course is not None else {}
+        specimen_name = self._SPECIMEN.get(panel_name) or str(self.rng.choice(["Serum", "Plasma"]))
+        order_name = self.PANEL_TO_ORDER_NAME.get(panel_name, panel_name)
 
         for lab_cat in labs:
-            if lab_cat not in self.LAB_PARAMS:
-                continue
-
-            mean, std, lower, upper = self.LAB_PARAMS[lab_cat]
+            spec = LABS[lab_cat]
+            mean, std, lower, upper = spec.params
             value = observed.get(lab_cat)
             if value is None:
                 value = self.rng.normal(mean, std)
-            value = float(np.clip(value, lower, upper))
-            if lab_cat in ("troponin_i", "troponin_t"):
-                value *= 1000  # simulated in ng/mL; CLIF reports troponin in ng/L
-
-            # Format value string
-            if lab_cat in ["ph", "ph_arterial", "ph_venous"]:
-                value_str = f"{value:.2f}"
-                value = round(value, 2)
-            elif lab_cat in ["procalcitonin"]:
-                value_str = f"{value:.3f}"
-                value = round(value, 3)
-            else:
-                value_str = f"{value:.1f}"
-                value = round(value, 1)
-
-            # Map lab_category to lab_order_category per CLIF 2.1.0 schema
-            lab_order_category = self._get_lab_order_category(lab_cat)
-
-            # Derive specimen and order name
-            specimen_name, specimen_category = self._get_specimen(lab_cat, panel_name)
+            value = round(float(np.clip(value, lower, upper)), spec.decimals)
+            value_str = f"{value:.{spec.decimals}f}"
 
             records.append(
                 {
@@ -437,66 +383,33 @@ class LabsGenerator(BaseGenerator):
                     "lab_order_dttm": order_time,
                     "lab_collect_dttm": collect_time,
                     "lab_result_dttm": result_time,
-                    "lab_order_category": lab_order_category,
-                    "lab_order_name": self.PANEL_TO_ORDER_NAME.get(panel_name, panel_name),
+                    "lab_order_category": ("blood_gas" if lab_cat == "bicarbonate" and panel_name in self._GASES
+                                           else self._get_lab_order_category(lab_cat)),
+                    "lab_order_name": order_name,
                     "lab_category": lab_cat,
                     "lab_name": lab_cat.lower(),
                     "lab_value": value_str,
                     "lab_value_numeric": value,
-                    "reference_unit": reference_units.get(lab_cat, ""),
-                    "lab_loinc_code": self.LAB_LOINC_CODES.get(lab_cat, ""),
+                    "reference_unit": spec.unit_21 or spec.unit_30,
+                    "lab_loinc_code": spec.loinc,
                     "lab_specimen_name": specimen_name,
-                    "lab_specimen_category": specimen_category,
+                    "lab_specimen_category": "blood/plasma/serum",
                 }
             )
 
         return records
 
-    def _get_specimen(self, lab_cat: str, panel_name: str) -> tuple[str, str]:
-        """Return (specimen_name, specimen_category) based on lab and panel."""
-        if panel_name in ("abg_arterial",):
-            return "Arterial Blood", "blood"
-        elif panel_name in ("abg_venous",):
-            return "Venous Blood", "blood"
-        elif panel_name == "cbc":
-            return "Whole Blood", "blood"
-        else:
-            name = self.rng.choice(["Serum", "Plasma"])
-            return name, "blood"
-
     def _get_lab_order_category(self, lab_cat: str) -> str:
-        """Map lab_category to lab_order_category per CLIF 2.1.0 schema.
-        
-        Permissible values: blood_gas, bmp, cbc, coags, lft, misc
-        """
-        blood_gas_labs = {"ph_arterial", "ph_venous", "pco2_arterial", "po2_arterial",
-                          "pco2_venous", "so2_arterial", "so2_mixed_venous",
-                          "so2_central_venous"}
-        bmp_labs = {"sodium", "potassium", "chloride", "bicarbonate", "bun", "creatinine",
-                    "glucose_serum", "glucose_fingerstick", "calcium_total",
-                    "calcium_ionized", "magnesium", "phosphate"}
-        cbc_labs = {"hemoglobin", "wbc", "platelet_count",
-                    "basophils_percent", "basophils_absolute", "eosinophils_percent",
-                    "eosinophils_absolute", "lymphocytes_percent", "lymphocytes_absolute",
-                    "monocytes_percent", "monocytes_absolute", "neutrophils_percent",
-                    "neutrophils_absolute"}
-        coags_labs = {"inr", "pt", "ptt", "fibrinogen", "d_dimer"}
-        lft_labs = {"ast", "alt", "alkaline_phosphatase", "bilirubin_total",
-                    "bilirubin_conjugated", "bilirubin_unconjugated",
-                    "albumin", "total_protein", "ldh"}
+        """CLIF 2.1.0 lab_order_category from the mCIDE lab list.
 
-        if lab_cat in blood_gas_labs:
-            return "blood_gas"
-        elif lab_cat in bmp_labs:
-            return "bmp"
-        elif lab_cat in cbc_labs:
-            return "cbc"
-        elif lab_cat in coags_labs:
-            return "coags"
-        elif lab_cat in lft_labs:
-            return "lft"
-        else:
+        Permissible values: blood_gas, bmp, cbc, coags, lft, misc. CLIF
+        3.0.0-only labs carry their 3.0 order category (they never reach
+        2.1.0 output).
+        """
+        spec = LABS.get(lab_cat)
+        if spec is None:
             return "misc"
+        return spec.order_21 or spec.order_30 or "misc"
 
 
 def _runs(mask) -> list[tuple[int, int]]:

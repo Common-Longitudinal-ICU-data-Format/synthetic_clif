@@ -48,7 +48,6 @@ settings in `synthetic_clif/validation/integrity.py`.
 - 2.1 `ecmo_mcs` columns now match the CLIF 2.1 schema: `device_metric_name`,
   `device_rate`, `sweep`, `flow`, `fdO2` (was `control_parameter_name`,
   `control_parameter_value`, `sweep_set`, `fdO2_set`).
-- 2.1 troponin I is reported in ng/L, the CLIF unit (values x1000).
 - High flow nasal cannula flow is in `lpm_set`, not `flow_rate_set`.
 - CPAP and NIPPV rows now record observed respiratory rate and tidal volume.
 
@@ -67,6 +66,53 @@ settings in `synthetic_clif/validation/integrity.py`.
 - Medication dose ranges: clifpy has ranges for about half the doses
   generated; the rest are checked for unit kind only.
 - 3.0 tables not yet generated get only the generic checks once they are.
+
+## Unreleased: full lab coverage
+
+Before this change the README promised 52 lab categories but the generator
+made 29. Differentials, ionized calcium, SaO2, mixed venous gases,
+fingerstick glucose, troponin T, ESR, ferritin, LDH and the bilirubin
+fractions were missing, and several 3.0 categories had no source at all.
+
+Now 2.1 output has all 52 CLIF 2.1.0 lab categories, and 3.0 output adds
+seven labs that exist only in 3.0.0 (hematocrit, fibrinogen, D-dimer, mixed
+venous PO2, BNP, NT-proBNP and triglycerides), 58 categories in all. Every
+lab's units, order category and LOINC code live in one table,
+`synthetic_clif/config/lab_catalog.py`.
+
+### Relationships added
+- The differential sums to 100% and each absolute count equals WBC times
+  its percent. Infection and stress shift it toward neutrophils.
+- Conjugated plus unconjugated bilirubin equals the total; the conjugated
+  share rises after a day of severe illness.
+- SaO2 follows PaO2 on the oxygen dissociation curve.
+- Ionized calcium follows albumin-corrected calcium, falls with severity,
+  rises with acidosis, and dips after RBC or plasma transfusion.
+- Fingerstick glucose is checked about hourly on an insulin drip and a few
+  times a day for diabetics; it tracks serum glucose.
+- Mixed venous gases are drawn only while a PA catheter is in, and their
+  SvO2 matches the invasive hemodynamics table.
+- Each stay uses one troponin assay (I or T). Troponin and BNP or NT-proBNP
+  rise with cardiogenic shock and kidney injury and are drawn serially in it.
+- CRP, procalcitonin, ESR and ferritin are drawn when infection is
+  recognized; D-dimer rises and fibrinogen falls in septic shock and
+  bleeding, and cryoprecipitate raises fibrinogen.
+- Hematocrit is about three times hemoglobin.
+- Triglycerides are checked after two days of propofol and rise with it.
+
+### Visible changes
+- Troponin I is now reported in ng/L in 2.1 output too, as the 2.1 lab list
+  specifies (it was ng/mL).
+- 3.0 output uses the 3.0 order categories: fingerstick glucose is `poc`,
+  troponin and natriuretic peptides `cardiac`, CRP and procalcitonin
+  `inflammatory`, mixed venous gases `mixed_venous_blood_gas`, and
+  bicarbonate from a blood gas `blood_gas`.
+- 2.1 specimen category is `blood/plasma/serum`, a 2.1 permissible value.
+- Fixed LOINC codes: central venous SO2 is 97549-0 (was 2716-9).
+
+### Not yet covered
+- Urine and CSF labs, and 3.0 categories beyond the seven above (for
+  example drug levels and hormone panels).
 
 ## Unreleased: one shared hospital course (PR #60)
 
