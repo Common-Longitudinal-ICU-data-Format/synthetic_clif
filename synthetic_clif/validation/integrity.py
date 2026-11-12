@@ -146,6 +146,11 @@ EXTRA_RANGES: dict[str, dict] = {
     "intake_output": {"amount": (0, 20000)},
     "invasive_hemodynamics": {"measurement_value": _HEMO, "measure_value": _HEMO},
     "hospitalization": {"age_at_admission": (0, 120)},
+    # 3.0-only labs that clifpy 2.1.0 has no outlier range for (3.0 units)
+    "labs": {"lab_value_numeric": {
+        "hematocrit": (0, 80), "fibrinogen": (0, 2000), "d_dimer": (0, 200),
+        "po2_mixed_venous": (0, 200), "bnp": (0, 50000), "nt_pro_bnp": (0, 150000),
+        "triglycerides": (0, 10000)}},
 }
 
 #: {(table, column): (hours before admission, hours after discharge)} allowed.
@@ -419,9 +424,10 @@ def _range_specs(table: str, version: str) -> dict:
                 lo, hi = min(lo, cur[0]), max(hi, cur[1])
             specs["vital_value"][_norm(cat)] = (lo, hi)
     for col, rng in EXTRA_RANGES.get(table, {}).items():
-        if isinstance(rng, dict):
-            specs[col] = {_rule_value(table, _cat_col(table) or "", c, version): r
-                          for c, r in rng.items()}
+        if isinstance(rng, dict):  # adds to clifpy's per-category ranges
+            by_cat = specs.setdefault(col, {})
+            for c, r in rng.items():
+                by_cat.setdefault(_rule_value(table, _cat_col(table) or "", c, version), r)
         else:
             specs[col] = {"__all__": rng}
     return specs
