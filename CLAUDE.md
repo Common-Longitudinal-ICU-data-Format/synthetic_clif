@@ -50,6 +50,11 @@ python -m synthetic_clif --hospitalizations 100 --output data/v21/ --clif-versio
   maps 2.1 values to 3.0, `convert.py` turns the generated 2.1 tables into 3.0
   tables (and derives airway, line, misc_icu_orders, ed_encounter), and
   `validate.py` checks any table against the 3.0 schema
+- **`synthetic_clif/generators/v3/`**: the eight tables new in 3.0 (drain,
+  intermittent_dialysis, patient_attributes, radiology, clinical_notes_facts,
+  validated_diagnosis, model_registry, scores), generated natively in 3.0 vocabulary
+  from the course only when `clif_version="3.0"` and passed to `convert_to_clif3`
+  as `native_tables`. Each draws from its own `stream(name, seed)`
 - **`synthetic_clif/physiology/`**: `course.py` builds one hidden hourly `HospitalCourse` per
   hospitalization (severity, shock, respiratory failure, kidney injury, infection, devices,
   ventilator settings, vasopressor titration, vitals and lab values). The vitals, respiratory,
@@ -60,8 +65,8 @@ python -m synthetic_clif --hospitalizations 100 --output data/v21/ --clif-versio
   Keep any new per-stay state derivable from the hospitalization row, because parallel
   workers rebuild generators from (seed, mcide_dir) and only see their chunk.
   `events.py` adds slower clinical decisions to the course (infection and antibiotics,
-  CRRT, proning, MCS, comfort care, lines, sedation/RASS/GCS, fluids, transfusions, code
-  status), each from its own seeded stream so adding one never reshuffles the others.
+  CRRT, intermittent haemodialysis, proning, MCS, comfort care, lines, sedation/RASS/GCS,
+  fluids, PEG and abdominal drains, transfusions, code status), each from its own seeded stream so adding one never reshuffles the others.
   `outcomes.py` decides death and disposition; `SyntheticCLIFDataset._assign_outcomes` writes
   them before any other table is generated, and `course_for_row` rebuilds an expired stay
   with a terminal decline. Patient-level traits come from `_patient_seed`.

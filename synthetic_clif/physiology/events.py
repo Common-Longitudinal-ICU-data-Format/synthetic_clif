@@ -8,12 +8,14 @@ slower clock, each driven by that physiology:
 - infection recognition, cultures and antibiotics
 - bleeding and transfusion (RBC, platelets, plasma, cryoprecipitate)
 - CRRT for severe kidney injury, which clears creatinine and potassium
+- intermittent haemodialysis for severe kidney injury in stable patients
 - prone positioning for severe hypoxaemia, which raises PaO2
 - ECMO and other mechanical circulatory support
 - comfort care before death, with vasopressors withdrawn
 - arterial, central, dialysis and pulmonary-artery lines
 - sedation depth, RASS, GCS and delirium
 - fluid boluses, maintenance fluid, tube feeds, meals and urine output
+- gastrostomy after tracheostomy and drains for abdominal infection
 - code status
 
 Every event uses its own random stream derived from the course seed, so
@@ -64,11 +66,13 @@ def build_events(c) -> None:
     _prone(c, _stream(c, "prone"))
     _mcs(c, _stream(c, "mcs"))
     _comfort(c, _stream(c, "comfort"))
+    _ihd(c, _stream(c, "ihd"))
     _infection_and_antibiotics(c, _stream(c, "infection"))
     _shock_type(c)
     _lines(c, _stream(c, "lines"))
     _sedation(c, _stream(c, "sedation"))
     _fluids(c, _stream(c, "fluids"))
+    _tubes_and_drains(c, _stream(c, "tubes"))
     _transfusions(c, _stream(c, "transfusion"))
     _code_status(c, _stream(c, "code"))
     assert len(c.rass) == n
@@ -211,6 +215,55 @@ def _crrt(c, rng):
             crrt[s:e] = True
     c.crrt = crrt
     c._crrt_eff = np.clip(_lag(crrt.astype(float), 8.0), 0, 1)
+
+
+def _ihd(c, rng):
+    """Intermittent haemodialysis for severe kidney injury without CRRT.
+
+    Patients who need dialysis but never go on CRRT (CRRT is reserved for the
+    haemodynamically unstable) get 3-4 hour sessions roughly every other day
+    once they are off vasopressors, until the kidney recovers, comfort care
+    starts or they leave. Each session clears solutes; the effect fades as
+    creatinine and potassium build up again between sessions.
+    """
+    n = c.n_hours
+    c.ihd_sessions = []
+    if c.crrt.any():
+        return
+    need = _sustained(c.aki > 0.6, 12)
+    if not need.any() or rng.random() > 0.7:
+        return
+    stable = _sustained(c.ne_eq <= 0, 6)
+    ok = np.nonzero(need & stable)[0]
+    if not len(ok):
+        return
+    stop = min(float(c.comfort_h if c.comfort_h is not None else n - 1), c.los_h - 1.0)
+    recovered = _sustained(c.aki < 0.45, 24)
+    device = f"HD-{int(rng.integers(100, 999))}"
+    t = float(ok[0]) + rng.uniform(4, 24)
+    eff = np.zeros(n)
+    while t + 4.5 < stop:
+        i = int(t)
+        if recovered[i]:
+            break
+        if c.ne_eq[i] > 0:  # unstable today: try again tomorrow
+            t += 24.0
+            continue
+        dur = rng.uniform(3.0, 4.0)
+        overload = float(np.clip(0.4 + 0.6 * c.aki[i] - 0.3 * c.shock[i], 0, 1))
+        c.ihd_sessions.append(dict(
+            start=t, end=t + dur, device=device,
+            blood_flow=float(rng.choice([300, 350, 400], p=[0.3, 0.45, 0.25])),
+            dialysate_flow=float(rng.choice([500, 600, 800], p=[0.5, 0.2, 0.3])),
+            uf_goal=float(round(rng.uniform(500, 1500) + 1500 * overload, -2)),
+        ))
+        a, b = int(t), min(int(math.ceil(t + dur)), n)
+        eff[a:b] = np.maximum(eff[a:b], np.linspace(0.3, 0.65, max(b - a, 1)))
+        tail = np.arange(b, n)
+        eff[b:] = np.maximum(eff[b:], 0.65 * np.exp(-(tail - b) / 30.0))
+        t += dur + rng.uniform(40, 48)
+    if c.ihd_sessions:
+        c._crrt_eff = np.maximum(c._crrt_eff, eff)
 
 
 # ----------------------------------------------------------------------
@@ -369,6 +422,10 @@ def _lines(c, rng):
     for s, e in _runs(c.crrt):
         a = max(int(s - rng.uniform(1, 3)), 0)
         dial[a:int(min(e + rng.uniform(6, 48), n))] = True
+    if c.ihd_sessions:  # temporary dialysis catheter spanning the sessions
+        r = _stream(c, "ihd_line")
+        a = max(int(c.ihd_sessions[0]["start"] - r.uniform(1, 6)), 0)
+        dial[a:int(min(c.ihd_sessions[-1]["end"] + r.uniform(6, 48), n))] = True
     cardiogenic = c.dobutamine.any()
     severe = c.ne_eq > 0.3
     if (cardiogenic and rng.random() < 0.6) or (severe.any() and rng.random() < 0.15):
@@ -484,6 +541,29 @@ def _fluids(c, rng):
     if c.comfort_h is not None:
         uop[c.comfort_h:] *= 0.3
     c.uop = np.clip(uop, 0, 600)
+
+
+def _tubes_and_drains(c, rng):
+    """Feeding tubes and drains that procedures and the drain table share.
+
+    A tracheostomy patient who will need long-term feeding usually gets a
+    gastrostomy (PEG) a few days later; an abdominal infection is often
+    source-controlled with a percutaneous drain.
+    """
+    n = c.n_hours
+    c.peg_h = None
+    c.abd_drain = None
+    trach = np.nonzero(c.trach)[0]
+    if len(trach) and rng.random() < 0.55:
+        h = float(trach[0]) + rng.uniform(24, 120)
+        if h < c.los_h - 6:
+            c.peg_h = h
+    if c.infected and c.infection_source == "abdominal" and c.infection_recognized_h is not None \
+            and rng.random() < 0.4:
+        s = c.infection_recognized_h + rng.uniform(12, 72)
+        if s < c.los_h - 6:
+            e = s + rng.uniform(96, 336)
+            c.abd_drain = (float(s), float(e) if e < c.los_h - 1 else None)
 
 
 # ----------------------------------------------------------------------

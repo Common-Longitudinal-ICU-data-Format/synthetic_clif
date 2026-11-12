@@ -196,6 +196,9 @@ class HospitalCourse:
     bleed: np.ndarray = field(repr=False, default=None)       # cumulative Hgb loss g/dL
     crrt: np.ndarray = field(repr=False, default=None)        # bool
     crrt_mode: str = "cvvhdf"
+    ihd_sessions: list = field(repr=False, default_factory=list)  # [{start, end, ...}]
+    peg_h: Optional[float] = None                              # gastrostomy placement hour
+    abd_drain: Optional[tuple] = None                          # (start_h, end_h or None)
     prone: np.ndarray = field(repr=False, default=None)       # bool
     mcs: list = field(repr=False, default_factory=list)       # [{device, start, end}]
     marrow_failure: bool = False
@@ -739,7 +742,7 @@ class HospitalCourse:
         return tot
 
     def crrt_effect(self, i: int) -> float:
-        """Fraction of solute clearance achieved by CRRT at hour i (0..~1)."""
+        """Fraction of solute clearance achieved by CRRT or haemodialysis at hour i (0..~1)."""
         eff = getattr(self, "_crrt_eff", None)
         return 0.0 if eff is None else float(eff[self._i(i)])
 

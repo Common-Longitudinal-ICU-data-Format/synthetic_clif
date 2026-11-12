@@ -1,5 +1,111 @@
 # Changelog
 
+## Unreleased: the eight new CLIF 3.0 tables
+
+Before this change, CLIF 3.0 output left out eight tables that 3.0 adds:
+`intermittent_dialysis`, `drain`, `patient_attributes`, `radiology`,
+`clinical_notes_facts`, `validated_diagnosis`, `model_registry` and
+`scores`.
+
+Now all 41 tables of the 3.0 schema are generated. The eight new tables are
+built natively in 3.0 terms (`synthetic_clif/generators/v3/`) from the same
+hospital course as every other table, so they agree with the rest of the
+stay. They are only produced for 3.0 output; 2.1 output is unchanged.
+
+### Relationships added
+
+**intermittent_dialysis**
+- A new course event: kidney injury that does not need CRRT can be treated
+  with intermittent haemodialysis once the patient has been off pressors
+  for six hours. Sessions run 3-4 hours about every other day until the
+  kidneys recover, and each one lowers creatinine and potassium.
+- Every haemodialysis stay has a dialysis catheter in `line` and a billed
+  haemodialysis procedure (5A1D70Z / 90935). Ultrafiltration is charted in
+  `output` as `ultrafiltration`.
+
+**drain**
+- Foley catheters cover ICU time (and some ward stays), followed at times
+  by an external catheter; an orogastric or nasogastric tube with every
+  intubation; post-pyloric feeding tubes when feeds start; a PEG for about
+  half of tracheostomy patients; Jackson-Pratt drains for abdominal
+  infections; chest tubes and pigtails wherever `patient_procedures` bills
+  a thoracostomy.
+- Devices still in place at death, and PEG tubes, have no removal time.
+- Urine output in `output` is labelled by the device in place
+  (`indwelling_urinary_catheter`, `external_urinary_catheter` or
+  `urethral`) and carries that drain's id in `lda_id`. Chest tube output is
+  charted too.
+
+**patient_attributes**
+- Smoking status follows COPD; employment and marital status follow age;
+  functional status follows frailty; social-needs answers cluster.
+- Registration and nursing history are charted at each stay, pregnancy
+  status for women aged 12-50, and social-needs screening grows more common
+  in later years. Smokers may quit between stays, and function worsens
+  after a stay that ends in a nursing facility, LTACH or rehab.
+
+**radiology**
+- A chest film on arrival, after each intubation and line placement, after
+  chest tubes go in and come out, and most mornings on the ventilator; a
+  film to check feeding tube position; CT to find an infection's source
+  (without contrast when the kidneys are injured); CT head for coma or
+  delirium; ultrasound for shock liver and kidney injury; echocardiograms
+  in shock; Dopplers in long stays.
+- Studies are portable in the ICU. Order, capture and report times follow
+  in that order. Each report is a short templated impression that matches
+  the course (tube positions, bilateral opacities in severe respiratory
+  failure, low ejection fraction in cardiogenic shock) and is marked
+  `[synthetic report]`.
+
+**clinical_notes_facts**
+- History and physical, daily progress notes (ICU team or hospital
+  medicine, written by a trainee and co-signed), consult notes for each
+  consult order, a nephrology note when dialysis starts, procedure notes
+  for each procedure by its performing provider, transfer notes, nursing
+  and pharmacy notes, case-management notes for non-home discharges, and a
+  discharge summary for survivors or a death note for those who died.
+- Each note has revisions (incomplete, signed, co-signed, addendum) in time
+  order. Physician authors come from the `provider` table.
+
+**validated_diagnosis**
+- About half of ICU-level stays are chart-reviewed for sepsis (Sepsis-3),
+  acute respiratory failure, ARDS (Berlin) and acute kidney injury
+  (KDIGO), from the same course that drives the billed diagnoses. Every
+  confirmed sepsis label has a billed A41 code.
+- Labels the course does not support are `ruled_out`; ARDS in cardiogenic
+  shock and a few others are `uncertain` and go to a consensus panel.
+  Reviews are dated one to twelve months after discharge.
+
+**model_registry and scores**
+- The registry lists two versions each of the Deterioration Index and the
+  Sepsis Model, and a fall-risk model, with release dates. Each score comes
+  from the version live on its date.
+- The Deterioration Index (hourly) rises with severity, oxygen support and
+  pressors, so it is higher in patients who die. The Sepsis Model (every
+  four hours) follows infection; the older version is noisier. Fall risk
+  (each shift) rises with age and delirium and falls on the ventilator.
+
+### Other changes
+
+- The ARDS label in `validated_diagnosis` needs PEEP of at least 5 and
+  bilateral opacities, so it agrees with the chest film reports.
+- `SyntheticCLIFDataset` keeps the natively generated 3.0 tables in
+  `_tables_v3_native`, and `convert_to_clif3(..., native_tables=...)`
+  accepts them.
+- `HospitalCourse` gains `ihd_sessions`, `peg_h` and `abd_drain`.
+
+### Not yet covered
+
+- External ventricular drains are not generated.
+- `attribute_group` follows the mCIDE mapping, but the vendored schema
+  does not yet check it.
+
+### Checks
+
+35 new tests in `tests/test_clif3_new_tables.py` check each new table
+against the 3.0 schema and against the tables it is tied to. All 41 tables
+pass the built-in 3.0 validator.
+
 ## Unreleased: one shared hospital course (PR #60)
 
 Before this change each table drew its own values. MAP was generated
