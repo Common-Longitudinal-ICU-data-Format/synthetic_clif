@@ -8,7 +8,8 @@ and vocabularies only (not clinical plausibility):
 * ``null_required``: a required identifier or timestamp column has nulls
 * ``invalid_categorical``: a value outside the column's permissible values
 * ``group_mismatch``: a ``*_group`` value disagrees with the mCIDE mapping
-* ``wrong_dtype``: a DATETIME column is not timezone-aware UTC
+* ``wrong_dtype``: a column's dtype does not match its CLIF type (DATETIME must be
+  timezone-aware UTC, DATE tz-naive, DOUBLE float, INT integer, VARCHAR string)
 """
 
 from __future__ import annotations
@@ -27,6 +28,34 @@ _NULLABLE_REQUIRED = {
     "airway": set(),
     "line": set(),
 }
+
+
+_EXPECTED_DTYPE = {
+    "DATETIME": "datetime64[ns, UTC]",
+    "DATE": "datetime64 (tz-naive)",
+    "DOUBLE": "float",
+    "FLOAT": "float",
+    "INT": "integer",
+    "BIGINT": "integer",
+    "VARCHAR": "string",
+}
+
+
+def _dtype_ok(data_type: str, s: pd.Series) -> bool:
+    t = s.dtype
+    if data_type == "DATETIME":
+        return pd.api.types.is_datetime64_any_dtype(t) and str(getattr(s.dt, "tz", None)) == "UTC"
+    if data_type == "DATE":
+        return pd.api.types.is_datetime64_any_dtype(t) and getattr(s.dt, "tz", None) is None
+    if data_type in ("DOUBLE", "FLOAT"):
+        return pd.api.types.is_float_dtype(t)
+    if data_type in ("INT", "BIGINT"):
+        return pd.api.types.is_integer_dtype(t)
+    if data_type == "VARCHAR":
+        if t == object:  # fine if every value is a string
+            return bool(s.dropna().map(lambda v: isinstance(v, str)).all())
+        return pd.api.types.is_string_dtype(t)
+    return True
 
 
 def _key_like(col: str) -> bool:
@@ -67,11 +96,10 @@ def validate_table(name: str, df: pd.DataFrame) -> list[dict]:
                 errors.append(
                     {"type": "invalid_categorical", "table": name, "column": n, "values": bad[:20]}
                 )
-        if c["data_type"].upper() == "DATETIME" and len(df):
-            tz = getattr(getattr(df[n], "dt", None), "tz", None)
-            if tz is None or str(tz) != "UTC":
-                errors.append({"type": "wrong_dtype", "table": name, "column": n,
-                               "expected": "datetime64[ns, UTC]", "actual": str(df[n].dtype)})
+        dt = c["data_type"].upper()
+        if len(df) and not _dtype_ok(dt, df[n]):
+            errors.append({"type": "wrong_dtype", "table": name, "column": n,
+                           "expected": _EXPECTED_DTYPE.get(dt, dt), "actual": str(df[n].dtype)})
 
     for key, mapping in tbl.items():
         if not key.endswith("_to_group_mapping"):

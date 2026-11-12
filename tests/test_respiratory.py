@@ -50,7 +50,8 @@ class TestRespiratoryGenerator:
         if len(room_air) > 0:
             assert (room_air["fio2_set"].dropna() == 0.21).all()
 
-        # High flow NC should have flow rate
+        # High flow NC charts its flow in liters per minute (CLIF lpm_set)
         hfnc = df[df["device_category"] == "High Flow NC"]
         if len(hfnc) > 0:
-            assert hfnc["flow_rate_set"].notna().any()
+            assert hfnc["lpm_set"].between(30, 60).all()
+            assert hfnc["flow_rate_set"].isna().all()

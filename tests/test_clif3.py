@@ -19,16 +19,10 @@ from synthetic_clif.clif3 import convert_to_clif3, normalize_category_value, sch
 from synthetic_clif.clif3.validate import validate_table, validate_tables
 from synthetic_clif.clif3.vocab import to_v3_value
 from synthetic_clif.generators.dataset import SyntheticCLIFDataset, normalize_clif_version
+from tests.clifpy_errors import structural_errors
 
 V21_ONLY_TABLES = {"ecmo_mcs", "intake_output", "key_icu_orders"}
 
-# clifpy error types that mean the data breaks the 3.0 schema (as opposed to
-# data-quality warnings such as missingness or distribution shift)
-CLIFPY_STRUCTURAL_TYPES = {
-    "Missing Required Columns",
-    "Invalid Categorical Values",
-    "Category Group Mapping",
-}
 
 
 @pytest.fixture(scope="module")
@@ -243,17 +237,12 @@ def test_clifpy_3_0_no_structural_errors(v3_dataset):
             df = pd.read_parquet(path)
             try:
                 obj = cls(data_directory=tmp, filetype="parquet", timezone="UTC", data=df,
-                          clif_version="3.0")
+                          clif_version="3.0", output_directory=tmp)
             except TypeError:
                 pytest.skip("installed clifpy has no clif_version argument")
             obj.validate()
             checked += 1
-            bad = [
-                e for e in obj.errors
-                if e.get("type") in CLIFPY_STRUCTURAL_TYPES
-                or (e.get("type") == "Data Type Mismatch"
-                    and not (e.get("details") or {}).get("castable"))
-            ]
+            bad = structural_errors(obj.errors, df.columns)
             if bad:
                 failures[name] = bad
     assert checked >= 10

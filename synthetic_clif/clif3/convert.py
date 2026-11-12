@@ -150,25 +150,31 @@ class CLIF3Converter:
                 df[c] = pd.NA
         df = df[cols]
 
-        # 4. dtypes
+        # 4. dtypes. A value that cannot be cast is a generator bug: raise
+        #    rather than silently turning it into a null.
         for col in tbl["columns"]:
             c, dt = col["name"], col["data_type"].upper()
-            try:
-                if dt == "DATETIME":
-                    df[c] = _utc(df[c])
-                elif dt == "DATE":
-                    s = pd.to_datetime(df[c])
-                    if getattr(s.dt, "tz", None) is not None:
-                        s = s.dt.tz_convert("UTC").dt.tz_localize(None)
-                    df[c] = s.dt.normalize()  # midnight, tz-naive (clifpy: castable to DATE)
-                elif dt in ("DOUBLE", "FLOAT"):
-                    df[c] = pd.to_numeric(df[c], errors="coerce").astype("float64")
-                elif dt in ("INT", "BIGINT"):
-                    df[c] = pd.to_numeric(df[c], errors="coerce").round().astype("Int64")
-                elif dt == "VARCHAR":
-                    df[c] = df[c].astype("string")
-            except (TypeError, ValueError):
-                pass
+            orig = df[c]
+            before = orig.notna()
+            if dt == "DATETIME":
+                df[c] = _utc(df[c])
+            elif dt == "DATE":
+                s = pd.to_datetime(df[c], errors="coerce")
+                if getattr(s.dt, "tz", None) is not None:
+                    s = s.dt.tz_convert("UTC").dt.tz_localize(None)
+                df[c] = s.dt.normalize()  # midnight, tz-naive (clifpy: castable to DATE)
+            elif dt in ("DOUBLE", "FLOAT"):
+                df[c] = pd.to_numeric(df[c], errors="coerce").astype("float64")
+            elif dt in ("INT", "BIGINT"):
+                df[c] = pd.to_numeric(df[c], errors="coerce").round().astype("Int64")
+            elif dt == "VARCHAR":
+                df[c] = df[c].astype("string")
+            lost = before & df[c].isna()
+            if lost.any():
+                raise ValueError(
+                    f"{name}.{c}: {int(lost.sum())} value(s) cannot be cast to {dt}, "
+                    f"e.g. {orig[lost].astype(str).unique()[:3].tolist()}"
+                )
         return df.reset_index(drop=True)
 
     # ------------------------------------------------------ per-table fixes
@@ -200,7 +206,7 @@ class CLIF3Converter:
         return df
 
     def _t_labs(self, df):
-        # 3.0 reports troponins in ng/L (2.1 synthetic data used ng/mL)
+        # 3.0 reports troponins in ng/L (older 2.1 synthetic data used ng/mL)
         trop = df["lab_category"].isin(["troponin_i", "troponin_t"]) & df[
             "reference_unit"
         ].astype(str).str.lower().eq("ng/ml")
@@ -221,7 +227,14 @@ class CLIF3Converter:
         miss = df["lab_order_dttm"].isna() & df["lab_collect_dttm"].notna()
         if miss.any():
             lead = pd.to_timedelta(self.rng.uniform(5, 60, int(miss.sum())), unit="m")
-            df.loc[miss, "lab_order_dttm"] = _utc(df.loc[miss, "lab_collect_dttm"]) - lead
+            collect = _utc(df.loc[miss, "lab_collect_dttm"])
+            order = collect - lead
+            bounds = self._hosp_bounds()
+            if bounds is not None:
+                # never ordered before the admission (admission labs)
+                admit = df.loc[miss, "hospitalization_id"].map(bounds["admission_dttm"])
+                order = order.where(admit.isna() | (order >= admit), admit.where(admit <= collect, collect))
+            df.loc[miss, "lab_order_dttm"] = order
         # one result per (stay, collection time, analyte): 3.0 composite key
         df = df.drop_duplicates(["hospitalization_id", "lab_collect_dttm", "lab_category"])
         if "lab_loinc_code" in df.columns:
@@ -357,25 +370,26 @@ class CLIF3Converter:
                 )
 
             add("Pump Flow (L/min)", "flow", r.flow)
-            add("Sweep Gas (L/min)", "sweep", r.sweep_set)
-            add("FdO2", "fdo2", r.fdO2_set)
-            cp = str(r.control_parameter_category or "").lower()
+            add("Sweep Gas (L/min)", "sweep", r.sweep)
+            add("FdO2", "fdo2", r.fdO2)
+            metric = r.device_metric_name
+            cp = "" if metric is None or pd.isna(metric) else str(metric).lower()
             if support == "ecmo":
-                add("Pump Speed (RPM)", "rpm", r.control_parameter_value)
+                add("Pump Speed (RPM)", "rpm", r.device_rate)
             elif device == "impella":
                 # Impella performance level P1-P9 tracks delivered flow
                 flow = r.flow if r.flow is not None and not pd.isna(r.flow) else 3.0
                 add("P-Level", "performance", float(np.clip(round(2 + (flow - 2.0) * 2.0), 1, 9)))
             elif device == "centrimag":
-                v = r.control_parameter_value
+                v = r.device_rate
                 if v is not None and not pd.isna(v):
                     # CentriMag runs at ~2,500-5,500 RPM
                     add("Pump Speed (RPM)", "rpm", v / 10 if v > 10_000 else v)
             elif support == "iabp":
-                v = r.control_parameter_value
+                v = r.device_rate
                 add("Augmentation Ratio", "iabp_ratio", 1.0 if v is None or pd.isna(v) else v)
             elif cp:
-                add(str(r.control_parameter_name), cp, r.control_parameter_value)
+                add(str(metric), cp, r.device_rate)
         return pd.DataFrame(rows)
 
     def _t_intake_output(self, df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:

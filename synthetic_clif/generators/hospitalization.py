@@ -80,9 +80,18 @@ class HospitalizationGenerator(BaseGenerator):
                 rng=self.rng,
             )
 
+            prev_discharge = None
             for hosp_idx, (admit_time, los) in enumerate(
                 zip(admission_times, los_days)
             ):
+                # A readmission cannot start before the previous stay ends:
+                # move it to 1-14 days after that discharge (no new random
+                # draw, so the rest of the dataset is unchanged)
+                if prev_discharge is not None and admit_time <= prev_discharge:
+                    gap_days = 1 + int(float(los) * 1000) % 14
+                    admit_time = (prev_discharge + timedelta(days=gap_days)).replace(
+                        second=0, microsecond=0
+                    )
                 # Calculate discharge time
                 discharge_time = admit_time + timedelta(days=float(los))
 
@@ -120,6 +129,7 @@ class HospitalizationGenerator(BaseGenerator):
                 tract = f"{self.rng.integers(100000, 999999):06d}"
                 zip5 = f"{self.rng.integers(10000, 99999)}"
 
+                prev_discharge = discharge_time
                 records.append(
                     {
                         "hospitalization_id": hosp_id,
