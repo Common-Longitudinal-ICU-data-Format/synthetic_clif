@@ -180,6 +180,10 @@ STAY_WINDOW_ALLOWANCE: dict[tuple[str, str], Optional[tuple[float, float]]] = {
     ("line", "removed_dttm"): None,
     ("airway", "removed_dttm"): None,
     ("drain", "removed_dttm"): None,
+    # discharge summaries, death notes, co-signatures and addenda are written
+    # and signed after the patient leaves; an H&P can start before admission
+    ("clinical_notes_facts", "creation_dttm"): (1, 24),
+    ("clinical_notes_facts", "revision_dttm"): (1, 7 * 24),
 }
 
 # Tolerance for clocks that round or truncate (e.g. a vitals time vs admission)

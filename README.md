@@ -172,10 +172,15 @@ a 2.1 run.
 - **New tables derived from existing data:** `airway` (from IMV episodes and
   tracheostomy), `misc_icu_orders` (extubation orders), `line` (from
   vasopressors, CRRT, invasive hemodynamics) and `ed_encounter` (from ED ADT rows).
-- **Not yet generated:** `drain`, `intermittent_dialysis`, `patient_attributes`,
-  `radiology`, `clinical_notes_facts`, `validated_diagnosis`, `model_registry`
-  and `scores`. PVR and SvO2 rows of `invasive_hemodynamics` are dropped because
-  3.0 has no category for them.
+- **New tables generated from the course:** `drain`, `intermittent_dialysis`,
+  `patient_attributes`, `radiology`, `clinical_notes_facts`,
+  `validated_diagnosis`, `model_registry` and `scores` are generated natively
+  in 3.0 terms (`synthetic_clif/generators/v3/`) from the same hospital course,
+  so drains match intubations and procedures, dialysis has its catheter,
+  imaging follows events, and scores track severity (see
+  [CHANGELOG.md](CHANGELOG.md)).
+- PVR and SvO2 rows of `invasive_hemodynamics` are dropped because 3.0 has no
+  category for them.
 
 The 3.0.0 schema (columns, types, permissible values, group mappings) is
 vendored in `synthetic_clif/clif3/clif3_schema.json`, built by

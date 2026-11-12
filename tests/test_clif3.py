@@ -133,7 +133,8 @@ class TestSchemaConformance:
             assert set(trop["reference_unit"].dropna().str.lower()) <= {"ng/l"}
 
     def test_conversion_is_deterministic(self, v3_dataset):
-        again = convert_to_clif3(v3_dataset._tables_v21, seed=v3_dataset.seed)
+        again = convert_to_clif3(v3_dataset._tables_v21, seed=v3_dataset.seed,
+                                 native_tables=v3_dataset._tables_v3_native)
         for name, df in v3_dataset._tables.items():
             pd.testing.assert_frame_equal(df.reset_index(drop=True),
                                           again[name].reset_index(drop=True), obj=name)

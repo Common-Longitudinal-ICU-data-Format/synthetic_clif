@@ -131,6 +131,9 @@ class PatientProceduresGenerator(BaseGenerator):
         "pa_catheter": ("02HP32Z", "93503"),
         "tracheostomy": ("0B110F4", "31600"),
         "crrt": ("5A1D90Z", "90945"),
+        "ihd": ("5A1D70Z", "90935"),
+        "peg": ("0DH63UZ", "43246"),
+        "abd_drain": ("0W9G30Z", "49406"),
         "VV_ECMO": ("5A1522H", "33946"),
         "VA_ECMO": ("5A1522G", "33946"),
         "Impella_CP": ("02HA3RZ", "33990"),
@@ -170,6 +173,12 @@ class PatientProceduresGenerator(BaseGenerator):
         crrt = starts(course.crrt)
         for i in crrt:
             events.append((i, "crrt"))
+        for sess in course.ihd_sessions:
+            events.append((sess["start"], "ihd"))
+        if course.peg_h is not None:
+            events.append((course.peg_h, "peg"))
+        if course.abd_drain is not None:
+            events.append((course.abd_drain[0], "abd_drain"))
         for m in course.mcs:
             events.append((m["start"], m["device"]))
         for tr in course.transfusions:

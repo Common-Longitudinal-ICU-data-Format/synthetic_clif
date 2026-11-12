@@ -183,6 +183,17 @@ class SyntheticCLIFDataset:
         self.therapy_gen = TherapyDetailsGenerator(seed=next_seed(), mcide=self.mcide)
         self.transfusion_gen = TransfusionGenerator(seed=next_seed(), mcide=self.mcide)
 
+        # CLIF 3.0-only tables (seeded last so the 2.1 tables are unchanged)
+        from synthetic_clif.generators import v3
+
+        self.drain_gen = v3.DrainGenerator(seed=next_seed(), mcide=self.mcide)
+        self.ihd_gen = v3.IntermittentDialysisGenerator(seed=next_seed(), mcide=self.mcide)
+        self.attributes_gen = v3.PatientAttributesGenerator(seed=next_seed(), mcide=self.mcide)
+        self.radiology_gen = v3.RadiologyGenerator(seed=next_seed(), mcide=self.mcide)
+        self.notes_gen = v3.ClinicalNotesFactsGenerator(seed=next_seed(), mcide=self.mcide)
+        self.validated_dx_gen = v3.ValidatedDiagnosisGenerator(seed=next_seed(), mcide=self.mcide)
+        self.scores_gen = v3.ScoresGenerator(seed=next_seed(), mcide=self.mcide)
+
     def generate(self, verbose: bool = True) -> dict[str, pd.DataFrame]:
         """Generate all tables with referential integrity.
 
@@ -386,11 +397,13 @@ class SyntheticCLIFDataset:
             _log("transfusion", t, len(self._tables["transfusion"]))
 
         if self.clif_version == "3.0":
+            native = self._generate_clif3_tables(course_hosps, patients, _log)
             t = time.time()
             from synthetic_clif.clif3 import convert_to_clif3
 
             self._tables_v21 = self._tables
-            self._tables = convert_to_clif3(self._tables, seed=self.seed)
+            self._tables_v3_native = native
+            self._tables = convert_to_clif3(self._tables, seed=self.seed, native_tables=native)
             _log("")
             _log("converted to CLIF 3.0", t, sum(len(df) for df in self._tables.values()))
 
@@ -400,6 +413,44 @@ class SyntheticCLIFDataset:
         _log(f"  Total: {total_rows:,} rows across {len(self._tables)} tables [{total_elapsed:.2f}s]")
 
         return self._tables
+
+    def _generate_clif3_tables(self, course_hosps, patients, _log) -> dict[str, pd.DataFrame]:
+        """Tables that exist only in CLIF 3.0, built from the course and the 2.1 tables.
+
+        Returns 3.0 tables plus ``_output_extra`` (drain and dialysis output
+        rows the converter appends to ``output``).
+        """
+        import time
+
+        _log("")
+        _log("  Generating CLIF 3.0 tables...")
+        tb = self._tables
+        out: dict[str, pd.DataFrame] = {}
+
+        def run(name, fn):
+            t = time.time()
+            res = fn()
+            df = res[0] if isinstance(res, tuple) else res
+            out[name] = df
+            _log(name, t, len(df))
+            return res
+
+        _, drain_out = run("drain", lambda: self.drain_gen.generate(
+            course_hosps, tb.get("adt"), tb.get("patient_procedures")))
+        _, ihd_out = run("intermittent_dialysis", lambda: self.ihd_gen.generate(course_hosps))
+        out["_output_extra"] = pd.concat([d for d in (drain_out, ihd_out) if len(d)], ignore_index=True) \
+            if len(drain_out) or len(ihd_out) else pd.DataFrame()
+        run("patient_attributes", lambda: self.attributes_gen.generate(patients, course_hosps))
+        run("radiology", lambda: self.radiology_gen.generate(course_hosps, tb.get("adt"), out["drain"]))
+        run("clinical_notes_facts", lambda: self.notes_gen.generate(
+            course_hosps, tb.get("adt"), tb.get("provider"), tb.get("key_icu_orders"),
+            tb.get("patient_procedures")))
+        run("validated_diagnosis", lambda: self.validated_dx_gen.generate(course_hosps))
+        from synthetic_clif.generators.v3 import model_registry
+
+        run("model_registry", model_registry)
+        run("scores", lambda: self.scores_gen.generate(course_hosps))
+        return out
 
     def _assign_outcomes(self, patients, hospitalizations):
         """Decide deaths and discharge destinations from each stay's course.

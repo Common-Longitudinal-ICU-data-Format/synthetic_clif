@@ -15,8 +15,13 @@ into CLIF 3.0.0:
   ``participant_id``/``enrollment_dttm``, culture ``order_id``, ...);
 * new 3.0 tables that follow from the simulated course are derived:
   ``airway`` (from invasive ventilation), ``line`` (from vasopressors, CRRT,
-  PA-catheter data and arterial access), ``ed_encounter`` (from ED ADT
-  segments) and ``misc_icu_orders`` (extubation orders);
+  intermittent dialysis, PA-catheter data and arterial access),
+  ``ed_encounter`` (from ED ADT segments) and ``misc_icu_orders``
+  (extubation orders);
+* tables generated natively in 3.0 form (``native_tables``, from
+  ``synthetic_clif.generators.v3``) are added; their drains set the urine
+  output category and ``lda_id``, and drain and dialysis output is appended
+  to ``output``;
 * every table is conformed to the 3.0 column list and order.
 
 The conversion is deterministic for a given ``seed``.
@@ -81,8 +86,10 @@ def _utc(s: pd.Series) -> pd.Series:
 class CLIF3Converter:
     """Stateful converter (holds the RNG and the 2.1 tables)."""
 
-    def __init__(self, tables: dict[str, pd.DataFrame], seed: int = 42):
+    def __init__(self, tables: dict[str, pd.DataFrame], seed: int = 42,
+                 native_tables: Optional[dict[str, pd.DataFrame]] = None):
         self.src = tables
+        self.native = dict(native_tables or {})
         self.rng = np.random.default_rng(seed + 3_000)
 
     # ------------------------------------------------------------------ API
@@ -116,6 +123,21 @@ class CLIF3Converter:
             ed = self._derive_ed_encounter()
             if ed is not None:
                 out["ed_encounter"] = ed
+
+        if self.native:
+            from synthetic_clif.generators.v3 import label_urine_output
+
+            extra = self.native.get("_output_extra")
+            if "output" in out:
+                out["output"] = label_urine_output(out["output"], self.native.get("drain"))
+                if extra is not None and len(extra):
+                    out["output"] = pd.concat([out["output"], extra], ignore_index=True)
+                    out["output"]["recorded_dttm"] = _utc(out["output"]["recorded_dttm"])
+                    out["output"] = out["output"].sort_values(
+                        ["hospitalization_id", "recorded_dttm"], kind="stable")
+            for name, df in self.native.items():
+                if not name.startswith("_"):
+                    out[name] = df
 
         return {name: self._conform(name, df) for name, df in out.items()}
 
@@ -606,6 +628,17 @@ class CLIF3Converter:
                     str(self.rng.choice(["right_ij", "left_ij", "right_femoral", "left_femoral"], p=[0.5, 0.1, 0.3, 0.1])),
                     t.min() - hours(1, 6), t.max() + hours(0, 48), 2)
 
+        # Dialysis catheter for intermittent haemodialysis (3.0-only table)
+        ihd = self.native.get("intermittent_dialysis")
+        if ihd is not None and not ihd.empty:
+            for hid, g in ihd.groupby("hospitalization_id"):
+                if hid not in bounds.index:
+                    continue
+                t = _utc(g["recorded_dttm"])
+                add(hid, "dialysis_catheter",
+                    str(self.rng.choice(["right_ij", "left_ij", "right_femoral", "left_femoral"], p=[0.5, 0.1, 0.3, 0.1])),
+                    t.min() - hours(1, 6), t.max() + hours(6, 48), 2)
+
         # Pulmonary artery catheter for invasive hemodynamics
         ih = self.src.get("invasive_hemodynamics")
         if ih is not None and not ih.empty:
@@ -676,7 +709,15 @@ class CLIF3Converter:
 
 
 def convert_to_clif3(
-    tables: dict[str, pd.DataFrame], seed: int = 42, derive_new_tables: bool = True
+    tables: dict[str, pd.DataFrame],
+    seed: int = 42,
+    derive_new_tables: bool = True,
+    native_tables: Optional[dict[str, pd.DataFrame]] = None,
 ) -> dict[str, pd.DataFrame]:
-    """Convert a dict of CLIF 2.1 tables into CLIF 3.0.0 tables."""
-    return CLIF3Converter(tables, seed=seed).convert(derive_new_tables=derive_new_tables)
+    """Convert a dict of CLIF 2.1 tables into CLIF 3.0.0 tables.
+
+    ``native_tables`` are tables already in 3.0 form (only conformed), plus an
+    optional ``_output_extra`` frame of rows appended to ``output``.
+    """
+    return CLIF3Converter(tables, seed=seed, native_tables=native_tables).convert(
+        derive_new_tables=derive_new_tables)
